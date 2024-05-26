@@ -1,54 +1,95 @@
-# RestAPI-Automation-Backend
+# RestAPI-Automation-Backend Documentation
 
-## Requirements
+RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user registration, authentication, session management, and API call forwarding.
 
-- Python 3.7+
-- Docker
+## Endpoints
 
-## Installation
+### 1. `/register`
 
-1. **Clone the repository**
+- **Method:** POST
+- **Description:** Allows users to register by providing email, username, and password. An OTP (One Time Password) is sent to the registered email for verification.
+- **Request Body:**
+  ```json
+  {
+    "email": "user@example.com",
+    "username": "username",
+    "password": "password"
+  }
+  ```
+- **Response**
 
-   `git clone git@github.com:sanjaysagar12/MailAPI.git`
+```json
+{
+  "valid": true,
+  "message": "User registered successfully, please verify OTP sent to email."
+}
+```
 
-   Change directory to MailAPI
+### 2. `/verify`
 
-   `cd RestAPI-Automation-Backend`
+- **Method:** POST
+- **Description:** Verifies the user by confirming the OTP received via email during registration.
+- **Request Body:**
 
-2. **Install the required packages**
+```json
+{
+  "email": "user@example.com",
+  "otp": 123456
+}
+```
 
-   `pip install -r requirements.txt`
+- **Response:**
 
-3. **Run setup.py**
+```json
+{
+  "valid": true,
+  "message": "User verified successfully."
+}
+```
 
-   `python3 setup.py`
+### 3. `/login`
 
-4. **Run docker-compose**
+- **Method:** POST
+- **Description:** Allows users to log in with their email and password. Generates a session token upon successful login.
+- **Request Body:**
 
-   `docker-compose up -d`
+```json
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+```
 
-5. **Start the FastAPI server**
-   `uvicorn main:app --reload`
+### 4. `/profile`
 
-## The application will be available at http://localhost:8000
+- **Method:** POST
+- **Description:** Retrieves the user profile data. Requires a valid token in the request header for authentication.
+- **Response:**
 
-**Accessing the API Documentation**
-When you run your FastAPI application, you can access the documentation in two formats:
+```json
+{
+  "message": "Token is valid.",
+  "userdata": { "user_data": "..." },
+  "client_ip": "192.168.1.1"
+}
+```
 
-#### Swagger UI:
+### 5. `/fetch-one`
 
-- Accessible at http://127.0.0.1:8000/docs by default.
-- Provides an interactive interface where you can see all the endpoints, their request methods, - parameters, and responses.
-- Allows you to make requests to the API endpoints directly from the browser.
+- **Method:** POST
+- **Description:** Forwards an API call with specified method, URL, headers, and body. Requires a valid token in the request header for authentication.
+- **Request Body:**
 
-#### ReDoc:
+```json
+Copy code
+{
+    "method": "GET",
+    "url": "https://api.example.com/resource",
+    "headers": {
+        "Authorization": "Bearer token"
+    },
+    "body": {}
+}
+```
 
-- Accessible at http://127.0.0.1:8000/redoc by default.
-- Provides a more detailed and structured view of the API documentation.
-- Focuses on readability and is useful for understanding the overall API structure.
-
-**Accessing the Mongo Express**
-
-After starting docker-compose, open your web browser and navigate to http://localhost:9090 (or whatever port you specified in your configuration file). You should see the Mongo Express interface where you can interact with your MongoDB databases.
-
-# RestAPI-Automation-Backend
+- **Response:** Returns the response from the forwarded API call.
