@@ -48,13 +48,8 @@ class RegisterRequest(BaseModel):
     password: str
 
 
-class GetFetchOneRequest(BaseModel):
-    url: str
-    headers: dict
-    body: dict
-
-
-class PostFetchOneRequest(BaseModel):
+class FetchOneRequest(BaseModel):
+    method: str
     url: str
     headers: dict
     body: dict
@@ -101,29 +96,10 @@ async def verify_user(request: VerifyRequest):
     return result
 
 
-@app.post("/get-fetch-one")
-async def get_fetch_one(
+@app.post("/fetch-one")
+async def fetch_one(
     request: Request,
-    api_call: GetFetchOneRequest,
-    token: str = Header(None),
-):
-    client_ip = request.client.host
-    user_agent = request.headers.get("user-agent")
-    if token is None:
-        raise HTTPException(status_code=400, detail="Token is missing")
-    session = Session()
-    result = await session.verify(token, client_ip=client_ip, user_agent=user_agent)
-    if result["valid"]:
-        url = api_call.url
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                return await response.text()
-
-
-@app.post("/post-fetch-one")
-async def post_fetch_one(
-    request: Request,
-    api_call_data: PostFetchOneRequest,
+    api_call_data: FetchOneRequest,
     token: str = Header(None),
 ):
     client_ip = request.client.host
@@ -137,11 +113,38 @@ async def post_fetch_one(
         headers = api_call_data.headers
         data = api_call_data.body
         async with aiohttp.ClientSession() as request_session:
-            async with request_session.post(
-                url, json=data, headers=headers
-            ) as request_session:
-                responce = await request_session.text()
-                return json.dumps(responce)
+            if api_call_data.method == "GET":
+                async with request_session.get(
+                    url,
+                    json=data,
+                    headers=headers,
+                ) as response:
+                    return await response.text()
+
+            if api_call_data.method == "POST":
+                async with request_session.post(
+                    url,
+                    json=data,
+                    headers=headers,
+                ) as response:
+                    return await response.text()
+
+            if api_call_data.method == "PUT":
+                async with request_session.put(
+                    url,
+                    json=data,
+                    headers=headers,
+                ) as response:
+                    return await response.text()
+
+            if api_call_data.method == "DELETE":
+                async with request_session.delete(
+                    url,
+                    headers=headers,
+                ) as response:
+                    return await response.text()
+
+    return result
 
 
 @app.post("/profile")
