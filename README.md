@@ -13,7 +13,7 @@
 
    Change directory to MailAPI
 
-   `cd MailAPI`
+   `cd RestAPI-Automation-Backend`
 
 2. **Install the required packages**
 
