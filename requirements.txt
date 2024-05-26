@@ -1,5 +1,4 @@
-fastapi
-uvicorn
-motor
+quart
+quart-cors
+aiohttp
 pydantic
-requests
