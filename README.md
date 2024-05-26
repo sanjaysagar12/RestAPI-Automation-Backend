@@ -50,7 +50,7 @@ RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user 
 ### 3. `/login`
 
 - **Method:** POST
-- **Description:** Allows users to log in with their email and password. Generates a session token upon successful login.
+- **Description:** Allows users to login with their email and password. Generates a session token upon successful login.
 - **Request Body:**
 
 ```json
@@ -64,6 +64,8 @@ RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user 
 
 - **Method:** POST
 - **Description:** Retrieves the user profile data. Requires a valid token in the request header for authentication.
+- **Headers**
+  token: Session token
 - **Response:**
 
 ```json
@@ -78,6 +80,8 @@ RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user 
 
 - **Method:** POST
 - **Description:** Forwards an API call with specified method, URL, headers, and body. Requires a valid token in the request header for authentication.
+- **Headers**
+  token: Session token
 - **Request Body:**
 
 ```json
@@ -93,3 +97,34 @@ Copy code
 ```
 
 - **Response:** Returns the response from the forwarded API call.
+
+### 6. `/save-response`
+
+- **Method:** POST
+
+- **Description:** Saves the request and response data of an API call.
+
+- **Headers:**
+  token: Session token
+- **Request Body:**
+  ```json
+   {
+    "request": { ... },
+    "response": { ... }
+  }
+  ```
+
+### 7.`/history`
+
+- **Method:** POST
+- **Description:** Retrieves the history of saved API request and response data.
+
+- **Headers**
+  token: Session token
+- **Request Body:**
+  ```json
+  {
+    "valid": true,
+    "data": [ ... ]
+  }
+  ```

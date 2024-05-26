@@ -12,7 +12,13 @@ root_path = os.path.dirname(__file__)
 
 # Initialize Quart
 app = Quart(__name__)
-app = cors(app, allow_origin="http://localhost,http://localhost:8000")
+app = cors(
+    app,
+    allow_origin="http://localhost:8000",
+    allow_credentials=True,
+    allow_headers=["Content-Type"],
+)
+
 
 # Load configuration from config.json
 with open(f"{root_path}/config.json", "r") as config_file:
@@ -23,8 +29,10 @@ from User import User  # type: ignore
 from Session import Session  # type: ignore
 from Authentication import Authentication  # type: ignore
 from EMail import EMail  # type: ignore
+from EndPoint import EndPoint  # type: ignore
 
 email = EMail()
+session = Session()
 
 
 # Pydantic models
@@ -100,6 +108,63 @@ async def verify_user():
     return jsonify(result)
 
 
+@app.route("/login", methods=["POST"])
+async def login_user():
+    try:
+        data = await request.get_json()
+        if data is None:
+            raise TypeError("Missing JSON payload")
+        request_model = LoginRequest(**data)
+    except (ValidationError, TypeError) as e:
+        return await make_response(jsonify({"detail": str(e)}), 400)
+    auth = Authentication()
+    result = await auth.login(request_model.email, request_model.password)
+    if result["valid"]:
+        session = Session()
+        token = await session.start()
+        client_ip = request.remote_addr
+        user_agent = request.headers.get("User-Agent")
+        # To prevent session hijacking
+        await session.set("email", request_model.email)
+        await session.set("client_ip", client_ip)
+        await session.set("user_agent", user_agent)
+        created_on = datetime.datetime.now()
+        expire_on = created_on + datetime.timedelta(days=10)
+        await session.set("created_on", str(created_on))
+        await session.set("expire_on", str(expire_on))
+        return jsonify({"message": "Login successful", "token": token["token"]})
+    return await make_response(jsonify({"detail": "Invalid email or password"}), 400)
+
+
+async def verify_session(token, client_ip, user_agent):
+    if token is None:
+        return await make_response(jsonify({"detail": "Token is missing"}), 400)
+
+    return await session.verify(token, client_ip=client_ip, user_agent=user_agent)
+
+
+@app.route("/profile", methods=["POST"])
+async def profile():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    if result["valid"]:
+        return jsonify(
+            {
+                "valid": True,
+                "message": "Token is valid.",
+                "userdata": result["session_data"],
+                "client_ip": client_ip,
+            }
+        )
+    return await make_response(jsonify({"detail": result["error"]}), 400)
+
+
 @app.route("/fetch-one", methods=["POST"])
 async def fetch_one():
     try:
@@ -150,54 +215,49 @@ async def fetch_one():
     return jsonify(result)
 
 
-@app.route("/profile", methods=["POST"])
-async def profile():
+@app.route("/save-response", methods=["POST"])
+async def save_response():
     token = request.headers.get("Token")
     client_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
-
-    if token is None:
-        return await make_response(jsonify({"detail": "Token is missing"}), 400)
-
-    session = Session()
-    result = await session.verify(token, client_ip=client_ip, user_agent=user_agent)
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    print(result)
     if result["valid"]:
-        return jsonify(
-            {
-                "message": "Token is valid.",
-                "userdata": result["session_data"],
-                "client_ip": client_ip,
-            }
-        )
-    return await make_response(jsonify({"detail": result["error"]}), 400)
+        save_data = await request.get_json()
+        request_data = save_data["request"]
+        response_data = save_data["response"]
+        email = await session.get("email")
+        api_endpoint = EndPoint(email)
+        await api_endpoint.set(request=request_data, response=response_data)
+        return {"valid": True, "message": "data saved"}
+    return result
 
 
-@app.route("/login", methods=["POST"])
-async def login_user():
-    try:
-        data = await request.get_json()
-        if data is None:
-            raise TypeError("Missing JSON payload")
-        request_model = LoginRequest(**data)
-    except (ValidationError, TypeError) as e:
-        return await make_response(jsonify({"detail": str(e)}), 400)
-    auth = Authentication()
-    result = await auth.login(request_model.email, request_model.password)
+@app.route("/history", methods=["POST"])
+async def history():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    print(result)
     if result["valid"]:
-        session = Session()
-        token = await session.start()
-        client_ip = request.remote_addr
-        user_agent = request.headers.get("User-Agent")
-        # To prevent session hijacking
-        await session.set("email", request_model.email)
-        await session.set("client_ip", client_ip)
-        await session.set("user_agent", user_agent)
-        created_on = datetime.datetime.now()
-        expire_on = created_on + datetime.timedelta(days=10)
-        await session.set("created_on", str(created_on))
-        await session.set("expire_on", str(expire_on))
-        return jsonify({"message": "Login successful", "token": token["token"]})
-    return await make_response(jsonify({"detail": "Invalid email or password"}), 400)
+        email = await session.get("email")
+        api_endpoint = EndPoint(email)
+        data = await api_endpoint.get()
+        return {"valid": True, "data": data}
+    return result
+
+
+async def save_workflow():
+    pass
 
 
 if __name__ == "__main__":
