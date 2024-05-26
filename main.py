@@ -16,7 +16,7 @@ app = FastAPI()
 # Load configuration from config.json
 with open(f"{root_path}/config.json", "r") as config_file:
     config = json.load(config_file)
-sys.path.insert(1, config["include"])
+sys.path.insert(1, f"{root_path}/include")
 
 from User import User  # type: ignore
 from Session import Session  # type: ignore
