@@ -59,8 +59,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenRequest(BaseModel):
-    token: str
+async def verify_session(token, client_ip, user_agent):
+    if token is None:
+        return await make_response(jsonify({"detail": "Token is missing"}), 400)
+
+    return await session.verify(token, client_ip=client_ip, user_agent=user_agent)
 
 
 @app.route("/register", methods=["POST"])
@@ -121,30 +124,29 @@ async def login_user():
     result = await auth.login(request_model.email, request_model.password)
     if result["valid"]:
         session = Session()
+        user = User(request_model.email)
         token = await session.start()
         client_ip = request.remote_addr
         user_agent = request.headers.get("User-Agent")
+
+        created_on = datetime.datetime.now()
+        expire_on = created_on + datetime.timedelta(days=10)
+
         # To prevent session hijacking
         await session.set("email", request_model.email)
         await session.set("client_ip", client_ip)
         await session.set("user_agent", user_agent)
-        created_on = datetime.datetime.now()
-        expire_on = created_on + datetime.timedelta(days=10)
+        await session.set("username", await user.get("username"))
+
         await session.set("created_on", str(created_on))
         await session.set("expire_on", str(expire_on))
         return jsonify({"message": "Login successful", "token": token["token"]})
-    return await make_response(jsonify({"detail": "Invalid email or password"}), 400)
-
-
-async def verify_session(token, client_ip, user_agent):
-    if token is None:
-        return await make_response(jsonify({"detail": "Token is missing"}), 400)
-
-    return await session.verify(token, client_ip=client_ip, user_agent=user_agent)
+    return await make_response(result, 400)
 
 
 @app.route("/profile", methods=["POST"])
 async def profile():
+    # verifying the session
     token = request.headers.get("Token")
     client_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
@@ -154,11 +156,13 @@ async def profile():
         user_agent=user_agent,
     )
     if result["valid"]:
+        user = User(await session.get("email"))
         return jsonify(
             {
                 "valid": True,
                 "message": "Token is valid.",
-                "userdata": result["session_data"],
+                "session_data": result["session_data"],
+                "user_data": await user.get(),
                 "client_ip": client_ip,
             }
         )
@@ -254,10 +258,6 @@ async def history():
         data = await api_endpoint.get()
         return {"valid": True, "data": data}
     return result
-
-
-async def save_workflow():
-    pass
 
 
 if __name__ == "__main__":

@@ -19,8 +19,8 @@ class Authentication:
     async def login(self, email: EmailStr, password: str):
         auth_data = await authentication_collection.get("email", email)
         if auth_data and pwd_context.verify(password, auth_data["password"]):
-            return {"valid": True}
-        return {"valid": False}
+            return {"valid": True, "message": "login success"}
+        return {"valid": False, "error": "invalid email or password"}
 
     async def register(self, email: EmailStr, username: str, password: str):
         data = await authentication_collection.is_exist(
