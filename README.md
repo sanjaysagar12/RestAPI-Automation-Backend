@@ -180,7 +180,7 @@ curl -X POST http://127.0.0.1:5000/fetch-one \
         ]'
 ```
 
--**Responce Body:**
+- **Responce Body:**
 
 ```json
 [
@@ -229,10 +229,70 @@ curl -X POST http://127.0.0.1:5000/fetch-one \
 
 - **Headers**
   token: Session token
-- **Request Body:**
+- **Response:**
   ```json
   {
     "valid": true,
     "data": [ ... ]
   }
   ```
+
+### 9. `/workflow`
+
+- **Method:** POST
+- **Description:** The Async Workflow Execution Tool is designed to automate a sequence of HTTP API calls with support for dynamic data replacements.
+- **Headers**
+  token: Session token
+
+- **Request Body:**
+  ```json
+  {
+    "workflow_data":[...],
+    "automation_data":{....}
+  }
+  ```
+- **Example:**
+
+```json
+{
+  "workflow_data": [
+    {
+      "tag": "login",
+      "method": "POST",
+      "url": "http://localhost:8000/login",
+      "headers": {},
+      "body": {
+        "email": "sanjaysagarlearn@gmail.com",
+        "password": "12345"
+      },
+      "cookies": {}
+    },
+    {
+      "tag": "profile",
+      "method": "POST",
+      "url": "http://localhost:8000/profile",
+      "headers": {
+        "token": "1qwsdfe32were34ew"
+      },
+      "body": {},
+      "cookies": {}
+    },
+    {
+      "tag": "history",
+      "method": "POST",
+      "url": "http://localhost:8000/history",
+      "headers": {
+        "token": "iqdo3do2o3n90231kl"
+      },
+      "body": {},
+      "cookies": {}
+    }
+  ],
+  "automation_data": {
+    "login": {
+      "1qwsdfe32were34ew": ["(token)", "profile"],
+      "iqdo3do2o3n90231kl": ["(token)", "history"]
+    }
+  }
+}
+```

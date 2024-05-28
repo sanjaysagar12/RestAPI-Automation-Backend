@@ -31,6 +31,7 @@ from Session import Session  # type: ignore
 from Authentication import Authentication  # type: ignore
 from EMail import EMail  # type: ignore
 from EndPoint import EndPoint  # type: ignore
+from WorkFlow import WorkFlow  # type: ignore
 
 email = EMail()
 session = Session()
@@ -58,6 +59,11 @@ class VerifyRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class WorkFlowRequest(BaseModel):
+    workflow_data: list
+    automation_data: dict
 
 
 async def verify_session(token, client_ip, user_agent):
@@ -311,7 +317,7 @@ async def history():
         client_ip=client_ip,
         user_agent=user_agent,
     )
-    print(result)
+
     if result["valid"]:
         email = await session.get("email")
         api_endpoint = EndPoint(email)
@@ -320,68 +326,26 @@ async def history():
     return result
 
 
-@app.route("/history", methods=["POST"])
-async def workflow():
-    workflow_data = [
-        {
-            "tag": "login",
-            "method": "POST",
-            "required": False,
-            "url": "http://localhost:8000/login",
-            "headers": {},
-            "body": {
-                "email": "sanjaysagarlearn@gmail.com",
-                "password": "12345",
-            },
-            "cookies": {},
-        },
-        {
-            "tag": "profile",
-            "method": "POST",
-            "required": {
-                "headers": {
-                    "token": "(login){token}[1]",
-                },
-            },
-            "url": "http://localhost:8000/profile",
-            "headers": {
-                "token": "(login){token}",
-            },
-            "body": {},
-            "cookies": {},
-        },
-    ]
+@app.route("/workflow", methods=["POST"])
+async def run_workflow():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
 
-    async with aiohttp.ClientSession() as request_session:
-        response = {}
-        async for request in workflow_data:
-            tag = request["tag"]
-            method = request["method"]
-            data = request["body"]
-            url = request["url"]
-
-            headers = request["headers"]
-            if method == "GET":
-                async with request_session.get(
-                    url, json=data, headers=headers
-                ) as response:
-                    response[tag] = await response.text()
-
-            elif method == "POST":
-                async with request_session.post(
-                    url, json=data, headers=headers
-                ) as response:
-                    response[tag] = await response.text()
-
-            elif method == "PUT":
-                async with request_session.put(
-                    url, json=data, headers=headers
-                ) as response:
-                    response[tag] = await response.text()
-
-            elif method == "DELETE":
-                async with request_session.delete(url, headers=headers) as response:
-                    response[tag] = await response.text()
+    if result["valid"]:
+        data = await request.get_json()
+        workflow_request = WorkFlowRequest(**data)
+        workflow = WorkFlow()
+        response_list = await workflow.execute(
+            workflow_request.workflow_data, workflow_request.automation_data
+        )
+        return response_list
+    return result
 
 
 if __name__ == "__main__":
