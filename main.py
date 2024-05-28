@@ -1,3 +1,4 @@
+import asyncio
 import json
 import sys
 import os
@@ -169,6 +170,65 @@ async def profile():
     return await make_response(jsonify({"detail": result["error"]}), 400)
 
 
+@app.route("/fetch-many", methods=["POST"])
+async def fetch_many():
+    try:
+        api_calls_data = await request.get_json()
+        if api_calls_data is None or not isinstance(api_calls_data, list):
+            raise TypeError("Missing or invalid JSON payload")
+    except TypeError as e:
+        return await make_response(jsonify({"detail": "Invalid JSON payload"}), 400)
+
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+
+    if token is None:
+        return await make_response(jsonify({"detail": "Token is missing"}), 400)
+
+    session = Session()
+    result = await session.verify(token, client_ip=client_ip, user_agent=user_agent)
+    if not result["valid"]:
+        return jsonify(result)
+
+    async def make_api_call(api_call_data):
+        url = api_call_data["url"]
+        headers = api_call_data["headers"]
+        data = api_call_data["body"]
+        method = api_call_data["method"].upper()
+
+        async with aiohttp.ClientSession() as request_session:
+            if method == "GET":
+                async with request_session.get(
+                    url, json=data, headers=headers
+                ) as response:
+                    return await response.json()
+
+            elif method == "POST":
+                async with request_session.post(
+                    url, json=data, headers=headers
+                ) as response:
+                    return await response.json()
+
+            elif method == "PUT":
+                async with request_session.put(
+                    url, json=data, headers=headers
+                ) as response:
+                    return await response.json()
+
+            elif method == "DELETE":
+                async with request_session.delete(url, headers=headers) as response:
+                    return await response.json()
+
+    # Create tasks for each API call
+    tasks = [make_api_call(api_call_data) for api_call_data in api_calls_data]
+
+    # Run tasks concurrently and gather results
+    responses = await asyncio.gather(*tasks)
+
+    return jsonify(responses)
+
+
 @app.route("/fetch-one", methods=["POST"])
 async def fetch_one():
     try:
@@ -198,23 +258,23 @@ async def fetch_one():
                 async with request_session.get(
                     url, json=data, headers=headers
                 ) as response:
-                    return await response.text()
+                    return await response.json()
 
             elif method == "POST":
                 async with request_session.post(
                     url, json=data, headers=headers
                 ) as response:
-                    return await response.text()
+                    return await response.json()
 
             elif method == "PUT":
                 async with request_session.put(
                     url, json=data, headers=headers
                 ) as response:
-                    return await response.text()
+                    return await response.json()
 
             elif method == "DELETE":
                 async with request_session.delete(url, headers=headers) as response:
-                    return await response.text()
+                    return await response.json()
 
     return jsonify(result)
 
@@ -258,6 +318,70 @@ async def history():
         data = await api_endpoint.get()
         return {"valid": True, "data": data}
     return result
+
+
+@app.route("/history", methods=["POST"])
+async def workflow():
+    workflow_data = [
+        {
+            "tag": "login",
+            "method": "POST",
+            "required": False,
+            "url": "http://localhost:8000/login",
+            "headers": {},
+            "body": {
+                "email": "sanjaysagarlearn@gmail.com",
+                "password": "12345",
+            },
+            "cookies": {},
+        },
+        {
+            "tag": "profile",
+            "method": "POST",
+            "required": {
+                "headers": {
+                    "token": "(login){token}[1]",
+                },
+            },
+            "url": "http://localhost:8000/profile",
+            "headers": {
+                "token": "(login){token}",
+            },
+            "body": {},
+            "cookies": {},
+        },
+    ]
+
+    async with aiohttp.ClientSession() as request_session:
+        response = {}
+        async for request in workflow_data:
+            tag = request["tag"]
+            method = request["method"]
+            data = request["body"]
+            url = request["url"]
+
+            headers = request["headers"]
+            if method == "GET":
+                async with request_session.get(
+                    url, json=data, headers=headers
+                ) as response:
+                    response[tag] = await response.text()
+
+            elif method == "POST":
+                async with request_session.post(
+                    url, json=data, headers=headers
+                ) as response:
+                    response[tag] = await response.text()
+
+            elif method == "PUT":
+                async with request_session.put(
+                    url, json=data, headers=headers
+                ) as response:
+                    response[tag] = await response.text()
+
+            elif method == "DELETE":
+                async with request_session.delete(url, headers=headers) as response:
+                    response[tag] = await response.text()
 
 
 if __name__ == "__main__":
