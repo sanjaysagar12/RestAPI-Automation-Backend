@@ -85,20 +85,128 @@ RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user 
 - **Request Body:**
 
 ```json
-Copy code
 {
-    "method": "GET",
-    "url": "https://api.example.com/resource",
-    "headers": {
-        "Authorization": "Bearer token"
-    },
-    "body": {}
+  "method": "GET",
+  "url": "https://api.example.com/resource",
+  "headers": {
+    "Authorization": "Bearer token"
+  },
+  "body": {}
 }
 ```
 
 - **Response:** Returns the response from the forwarded API call.
 
-### 6. `/save-response`
+### 6. `/fetch-many`
+
+- **Method:** POST- **Headers:**
+
+- **Description:** This endpoint accepts a JSON payload containing multiple API call data and returns the responses in a JSON array.
+
+- **Headers:**
+  Request Headers
+  Content-Type: application/json
+  token: <your_token_here>
+  Request Body
+  The request body should be a JSON array containing objects with the following fields:
+- **body**
+  url (string): The URL of the API to call.
+  headers (object): The headers to include in the API call.
+  body (object): The body of the API call (if applicable).
+  method (string): The HTTP method to use (GET, POST, PUT, DELETE).
+
+- **Request:**
+
+```json
+[
+  {
+    "url": "https://jsonplaceholder.typicode.com/posts/1",
+    "headers": {},
+    "body": {},
+    "method": "GET"
+  },
+  {
+    "url": "https://jsonplaceholder.typicode.com/posts",
+    "headers": { "Content-Type": "application/json" },
+    "body": { "title": "foo", "body": "bar", "userId": 1 },
+    "method": "POST"
+  },
+  {
+    "url": "https://jsonplaceholder.typicode.com/posts/1",
+    "headers": { "Content-Type": "application/json" },
+    "body": { "title": "foo_updated", "body": "bar_updated", "userId": 1 },
+    "method": "PUT"
+  },
+  {
+    "url": "https://jsonplaceholder.typicode.com/posts/1",
+    "headers": {},
+    "body": {},
+    "method": "DELETE"
+  }
+]
+```
+
+- **Example:**
+
+```bash
+curl -X POST http://127.0.0.1:5000/fetch-one \
+    -H "Content-Type: application/json" \
+    -H "Token: your_token_here" \
+    -d '[
+          {
+            "url": "https://jsonplaceholder.typicode.com/posts/1",
+            "headers": {},
+            "body": {},
+            "method": "GET"
+          },
+          {
+            "url": "https://jsonplaceholder.typicode.com/posts",
+            "headers": {"Content-Type": "application/json"},
+            "body": {"title": "foo", "body": "bar", "userId": 1},
+            "method": "POST"
+          },
+          {
+            "url": "https://jsonplaceholder.typicode.com/posts/1",
+            "headers": {"Content-Type": "application/json"},
+            "body": {"title": "foo_updated", "body": "bar_updated", "userId": 1},
+            "method": "PUT"
+          },
+          {
+            "url": "https://jsonplaceholder.typicode.com/posts/1",
+            "headers": {},
+            "body": {},
+            "method": "DELETE"
+          }
+        ]'
+```
+
+-**Responce Body:**
+
+```json
+[
+  {
+    "userId": 1,
+    "id": 1,
+    "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+    "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto"
+  },
+  {
+    "title": "foo",
+    "body": "bar",
+    "userId": 1,
+    "id": 101
+  },
+  {
+    "title": "foo_updated",
+    "body": "bar_updated",
+    "userId": 1,
+    "id": 1
+  },
+  {}
+]
+```
+
+### 7. `/save-response`
 
 - **Method:** POST
 
@@ -114,7 +222,7 @@ Copy code
   }
   ```
 
-### 7.`/history`
+### 8.`/history`
 
 - **Method:** POST
 - **Description:** Retrieves the history of saved API request and response data.
