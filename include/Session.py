@@ -66,5 +66,5 @@ class Session:
             }
         return {
             "valid": False,
-            "error": "invalid",
+            "error": "invalid token",
         }

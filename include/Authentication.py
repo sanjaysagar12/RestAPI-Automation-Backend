@@ -104,5 +104,5 @@ class Authentication:
             del staging_data["password"]
             await users_collection.set(staging_data)
             await staging_collection.delete(key="email", value=email)
-            return {"valid": True}
-        return {"valid": False}
+            return {"valid": True, "message": "User verified successfully."}
+        return {"valid": False, "error": "Wrong OTP. Please try again."}

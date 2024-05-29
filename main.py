@@ -15,9 +15,9 @@ root_path = os.path.dirname(__file__)
 app = Quart(__name__)
 app = cors(
     app,
-    allow_origin="http://localhost:8000",
+    allow_origin="http://localhost:5173",  # Assuming your React app runs on port 5173
     allow_credentials=True,
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Token"],
 )
 
 
@@ -113,8 +113,6 @@ async def verify_user():
         return await make_response(jsonify({"detail": str(e)}), 400)
     auth = Authentication()
     result = await auth.verify(request_model.email, request_model.otp)
-    if result["valid"]:
-        return jsonify({"valid": True, "message": "User verified successfully."})
     return jsonify(result)
 
 
@@ -148,7 +146,7 @@ async def login_user():
         await session.set("created_on", str(created_on))
         await session.set("expire_on", str(expire_on))
         return jsonify({"message": "Login successful", "token": token["token"]})
-    return await make_response(result, 400)
+    return await make_response(jsonify(result), 400)
 
 
 @app.route("/profile", methods=["POST"])
@@ -168,6 +166,7 @@ async def profile():
             {
                 "valid": True,
                 "message": "Token is valid.",
+                "username": await user.get("username"),
                 "session_data": result["session_data"],
                 "user_data": await user.get(),
                 "client_ip": client_ip,
@@ -344,7 +343,7 @@ async def run_workflow():
         response_list = await workflow.execute(
             workflow_request.workflow_data, workflow_request.automation_data
         )
-        return response_list
+        return {"valid": True, "data": response_list}
     return result
 
 
