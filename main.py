@@ -203,27 +203,30 @@ async def fetch_many():
         method = api_call_data["method"].upper()
 
         async with aiohttp.ClientSession() as request_session:
-            if method == "GET":
-                async with request_session.get(
-                    url, json=data, headers=headers
-                ) as response:
-                    return await response.json()
+            try:
+                if method == "GET":
+                    async with request_session.get(
+                        url, json=data, headers=headers
+                    ) as response:
+                        return await response.json()
 
-            elif method == "POST":
-                async with request_session.post(
-                    url, json=data, headers=headers
-                ) as response:
-                    return await response.json()
+                elif method == "POST":
+                    async with request_session.post(
+                        url, json=data, headers=headers
+                    ) as response:
+                        return await response.json()
 
-            elif method == "PUT":
-                async with request_session.put(
-                    url, json=data, headers=headers
-                ) as response:
-                    return await response.json()
+                elif method == "PUT":
+                    async with request_session.put(
+                        url, json=data, headers=headers
+                    ) as response:
+                        return await response.json()
 
-            elif method == "DELETE":
-                async with request_session.delete(url, headers=headers) as response:
-                    return await response.json()
+                elif method == "DELETE":
+                    async with request_session.delete(url, headers=headers) as response:
+                        return await response.json()
+            except aiohttp.ContentTypeError as e:
+                return await response.text()
 
     # Create tasks for each API call
     tasks = [make_api_call(api_call_data) for api_call_data in api_calls_data]
@@ -259,28 +262,30 @@ async def fetch_one():
         method = api_call_data["method"].upper()
 
         async with aiohttp.ClientSession() as request_session:
-            if method == "GET":
-                async with request_session.get(
-                    url, json=data, headers=headers
-                ) as response:
-                    return await response.json()
+            try:
+                if method == "GET":
+                    async with request_session.get(
+                        url, json=data, headers=headers
+                    ) as response:
+                        return await response.json()
 
-            elif method == "POST":
-                async with request_session.post(
-                    url, json=data, headers=headers
-                ) as response:
-                    return await response.json()
+                elif method == "POST":
+                    async with request_session.post(
+                        url, json=data, headers=headers
+                    ) as response:
+                        return await response.json()
 
-            elif method == "PUT":
-                async with request_session.put(
-                    url, json=data, headers=headers
-                ) as response:
-                    return await response.json()
+                elif method == "PUT":
+                    async with request_session.put(
+                        url, json=data, headers=headers
+                    ) as response:
+                        return await response.json()
 
-            elif method == "DELETE":
-                async with request_session.delete(url, headers=headers) as response:
-                    return await response.json()
-
+                elif method == "DELETE":
+                    async with request_session.delete(url, headers=headers) as response:
+                        return await response.json()
+            except aiohttp.ContentTypeError as e:
+                return await response.text()
     return jsonify(result)
 
 
