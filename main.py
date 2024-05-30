@@ -187,7 +187,7 @@ async def profile():
     )
     if result["valid"]:
         user = User(await session.get("email"))
-        return make_response(
+        return await make_response(
             jsonify(
                 {
                     "valid": True,
