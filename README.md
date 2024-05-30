@@ -76,6 +76,8 @@ RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user 
 }
 ```
 
+## Manual Testing
+
 ### 5. `/fetch-one`
 
 - **Method:** POST
@@ -297,7 +299,9 @@ curl -X POST http://127.0.0.1:5000/fetch-one \
 }
 ```
 
-### 10. `/check-request-code endpoint`
+## Automation Testing
+
+### 10. `/check-request-code`
 
 - **Method:** POST
 - **Description:**
