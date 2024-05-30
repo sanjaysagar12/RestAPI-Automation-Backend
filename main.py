@@ -20,7 +20,6 @@ app = cors(
     allow_headers=["Content-Type", "Token"],
 )
 
-
 # Load configuration from config.json
 with open(f"{root_path}/config.json", "r") as config_file:
     config = json.load(config_file)
@@ -48,7 +47,7 @@ class FetchOneRequest(BaseModel):
     method: str
     url: str
     headers: dict
-    body: dict
+    body: Optional[dict] = None
 
 
 class VerifyRequest(BaseModel):
@@ -64,6 +63,14 @@ class LoginRequest(BaseModel):
 class WorkFlowRequest(BaseModel):
     workflow_data: list
     automation_data: dict
+
+
+class CheckRequestCodeRequest(BaseModel):
+    method: str
+    url: str
+    headers: dict
+    body: Optional[dict] = None
+    expected_code: int
 
 
 async def verify_session(token, client_ip, user_agent):
@@ -126,8 +133,8 @@ async def login_user():
     except (ValidationError, TypeError) as e:
         return await make_response(jsonify({"detail": str(e)}), 400)
     auth = Authentication()
-    result = await auth.login(request_model.email, request_model.password)
-    if result["valid"]:
+    response = await auth.login(request_model.email, request_model.password)
+    if response["valid"]:
         session = Session()
         user = User(request_model.email)
         token = await session.start()
@@ -145,8 +152,9 @@ async def login_user():
 
         await session.set("created_on", str(created_on))
         await session.set("expire_on", str(expire_on))
-        return jsonify({"message": "Login successful", "token": token["token"]})
-    return await make_response(jsonify(result), 400)
+        response.update({"token": token["token"]})
+        return jsonify(response)
+    return await make_response(jsonify(response), 400)
 
 
 @app.route("/profile", methods=["POST"])

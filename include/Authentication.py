@@ -56,6 +56,11 @@ class Authentication:
                 where={"email": email},
             )
             await staging_collection.set(
+                key="username",
+                value=username,
+                where={"email": email},
+            )
+            await staging_collection.set(
                 key="created_on",
                 value=created_on,
                 where={"email": email},
