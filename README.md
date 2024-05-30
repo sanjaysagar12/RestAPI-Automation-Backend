@@ -309,7 +309,9 @@ curl -X POST http://127.0.0.1:5000/fetch-one \
 
 - **Request Headers**
   Content-Type: application/json
+
   Token: <your-auth-token> (Required for session verification)
+
 - **Request Body:**
 
 ```json
@@ -330,11 +332,10 @@ curl -X POST http://127.0.0.1:5000/fetch-one \
 
 ```json
 {
-  "valid": True,
+  "valid": true,
   "message": "Success: The response code matches the expected code.",
   "status_code": 200
 }
-
 ```
 
 - **Example**
@@ -352,4 +353,52 @@ curl -X POST http://localhost:8000/check-request-code \
   "body": {},
   "expected_code": 200
 }'
+```
+
+### 11. `/validate-response-schema`
+
+- **Method:** POST
+- **Description:**
+  The `/validate-response-schema` endpoint allows users to make a specified HTTP request, check whether the response code matches the expected response code, and validate the response body structure against a given schema. This is useful for automated testing and validation of API
+- **Request Headers**
+  Content-Type: application/json
+
+  Token: <your-auth-token> (Required for session verification)
+
+- **Request body**
+
+```json
+{
+  "method": "string",
+  "url": "string",
+  "headers": {
+    "key": "value"
+  },
+  "body": {
+    "key": "value"
+  },
+  "expected_body_schema": {
+    "type": "object",
+    "properties": {
+      "key": { "type": "type" }
+    },
+    "required": ["key"]
+  }
+}
+```
+
+- **Response body**
+
+```json
+{
+  "valid": true,
+  "passed": true,
+  "message": "Success: The response code matches the expected code and the body matches the expected schema.",
+  "status_code": 200,
+  "response_body": {
+    "id": 1,
+    "name": "Example",
+    "email": "example@example.com"
+  }
+}
 ```

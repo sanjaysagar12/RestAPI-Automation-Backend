@@ -7,7 +7,7 @@ import aiohttp
 from pydantic import EmailStr, BaseModel, ValidationError
 from quart import Quart, request, jsonify, make_response
 from quart_cors import cors
-from typing import Optional
+from typing import Any, Dict, Optional
 
 root_path = os.path.dirname(__file__)
 
@@ -72,6 +72,14 @@ class CheckRequestCodeRequest(BaseModel):
     headers: dict
     body: Optional[dict] = None
     expected_code: int
+
+
+class ValidateResponseRequest(BaseModel):
+    method: str
+    url: str
+    headers: Dict[str, str]
+    body: Dict[str, Any]
+    expected_body_schema: Optional[Dict[str, Any]] = None
 
 
 async def verify_session(token, client_ip, user_agent):
@@ -391,6 +399,39 @@ async def check_request_code():
             url=request_model.url,
             headers=request_model.headers,
             body=request_model.body,
+        )
+        response.update({"valid": True})
+        return jsonify(response)
+    return await make_response(jsonify(result), 401)
+
+
+@app.route("/validate-response-schema", methods=["POST"])
+async def validate_response_schema():
+    # Verifying the session
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    if result["valid"]:
+        automation_testing = AutomationTesting()
+        try:
+            data = await request.get_json()
+            if data is None:
+                raise TypeError("Missing JSON payload")
+            request_model = ValidateResponseRequest(**data)
+        except (ValidationError, TypeError) as e:
+            return await make_response(jsonify({"detail": str(e)}), 401)
+
+        response = await automation_testing.validate_response(
+            method=request_model.method,
+            url=request_model.url,
+            headers=request_model.headers,
+            body=request_model.body,
+            expected_body_schema=request_model.expected_body_schema,
         )
         response.update({"valid": True})
         return jsonify(response)
