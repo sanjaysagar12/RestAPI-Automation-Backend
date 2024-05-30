@@ -296,3 +296,56 @@ curl -X POST http://127.0.0.1:5000/fetch-one \
   }
 }
 ```
+
+### 10. `/check-request-code endpoint`
+
+- **Method:** POST
+- **Description:**
+  The /check-request-code endpoint allows users to make a specified HTTP request and check whether the response code matches the expected response code. This is useful for automated testing and validation of API responses.
+
+- **Request Headers**
+  Content-Type: application/json
+  Token: <your-auth-token> (Required for session verification)
+- **Request Body:**
+
+```json
+{
+  "method": "string",
+  "url": "string",
+  "headers": {
+    "key": "value"
+  },
+  "body": {
+    "key": "value"
+  },
+  "expected_code": 200
+}
+```
+
+- **Response**
+
+```json
+{
+  "valid": True,
+  "message": "Success: The response code matches the expected code.",
+  "status_code": 200
+}
+
+```
+
+- **Example**
+
+```bash
+curl -X POST http://localhost:8000/check-request-code \
+-H "Content-Type: application/json" \
+-H "Token: your-auth-token" \
+-d '{
+  "method": "GET",
+  "url": "https://api.example.com/endpoint",
+  "headers": {
+    "Authorization": "Bearer your-token"
+  },
+  "body": {},
+  "expected_code": 200
+}'
+```

@@ -31,6 +31,7 @@ from Authentication import Authentication  # type: ignore
 from EMail import EMail  # type: ignore
 from EndPoint import EndPoint  # type: ignore
 from WorkFlow import WorkFlow  # type: ignore
+from Automation import AutomationTesting  # type: ignore
 
 email = EMail()
 session = Session()
@@ -75,7 +76,7 @@ class CheckRequestCodeRequest(BaseModel):
 
 async def verify_session(token, client_ip, user_agent):
     if token is None:
-        return await make_response(jsonify({"detail": "Token is missing"}), 400)
+        return await make_response(jsonify({"detail": "Token is missing"}), 401)
 
     return await session.verify(token, client_ip=client_ip, user_agent=user_agent)
 
@@ -88,7 +89,7 @@ async def register_user():
             raise TypeError("Missing JSON payload")
         request_model = RegisterRequest(**data)
     except (ValidationError, TypeError) as e:
-        return await make_response(jsonify({"detail": str(e)}), 400)
+        return await make_response(jsonify({"detail": str(e)}), 401)
     auth = Authentication()
     response = await auth.register(
         request_model.email, request_model.username, request_model.password
@@ -117,7 +118,7 @@ async def verify_user():
             raise TypeError("Missing JSON payload")
         request_model = VerifyRequest(**data)
     except (ValidationError, TypeError) as e:
-        return await make_response(jsonify({"detail": str(e)}), 400)
+        return await make_response(jsonify({"detail": str(e)}), 401)
     auth = Authentication()
     result = await auth.verify(request_model.email, request_model.otp)
     return jsonify(result)
@@ -131,7 +132,7 @@ async def login_user():
             raise TypeError("Missing JSON payload")
         request_model = LoginRequest(**data)
     except (ValidationError, TypeError) as e:
-        return await make_response(jsonify({"detail": str(e)}), 400)
+        return await make_response(jsonify({"detail": str(e)}), 401)
     auth = Authentication()
     response = await auth.login(request_model.email, request_model.password)
     if response["valid"]:
@@ -154,7 +155,7 @@ async def login_user():
         await session.set("expire_on", str(expire_on))
         response.update({"token": token["token"]})
         return jsonify(response)
-    return await make_response(jsonify(response), 400)
+    return await make_response(jsonify(response), 401)
 
 
 @app.route("/profile", methods=["POST"])
@@ -170,17 +171,20 @@ async def profile():
     )
     if result["valid"]:
         user = User(await session.get("email"))
-        return jsonify(
-            {
-                "valid": True,
-                "message": "Token is valid.",
-                "username": await user.get("username"),
-                "session_data": result["session_data"],
-                "user_data": await user.get(),
-                "client_ip": client_ip,
-            }
+        return make_response(
+            jsonify(
+                {
+                    "valid": True,
+                    "message": "Token is valid.",
+                    "username": await user.get("username"),
+                    "session_data": result["session_data"],
+                    "user_data": await user.get(),
+                    "client_ip": client_ip,
+                }
+            ),
+            200,
         )
-    return await make_response(jsonify({"detail": result["error"]}), 400)
+    return await make_response(jsonify({"detail": result["error"]}), 401)
 
 
 @app.route("/fetch-many", methods=["POST"])
@@ -190,14 +194,14 @@ async def fetch_many():
         if api_calls_data is None or not isinstance(api_calls_data, list):
             raise TypeError("Missing or invalid JSON payload")
     except TypeError as e:
-        return await make_response(jsonify({"detail": "Invalid JSON payload"}), 400)
+        return await make_response(jsonify({"detail": "Invalid JSON payload"}), 401)
 
     token = request.headers.get("Token")
     client_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
 
     if token is None:
-        return await make_response(jsonify({"detail": "Token is missing"}), 400)
+        return await make_response(jsonify({"detail": "Token is missing"}), 401)
 
     session = Session()
     result = await session.verify(token, client_ip=client_ip, user_agent=user_agent)
@@ -252,14 +256,14 @@ async def fetch_one():
         if api_call_data is None:
             raise TypeError("Missing JSON payload")
     except TypeError as e:
-        return await make_response(jsonify({"detail": "Invalid JSON payload"}), 400)
+        return await make_response(jsonify({"detail": "Invalid JSON payload"}), 401)
 
     token = request.headers.get("Token")
     client_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
 
     if token is None:
-        return await make_response(jsonify({"detail": "Token is missing"}), 400)
+        return await make_response(jsonify({"detail": "Token is missing"}), 401)
 
     session = Session()
     result = await session.verify(token, client_ip=client_ip, user_agent=user_agent)
@@ -358,6 +362,39 @@ async def run_workflow():
         )
         return {"valid": True, "data": response_list}
     return result
+
+
+@app.route("/check-request-code", methods=["POST"])
+async def check_request_code():
+    # verifying the session
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    if result["valid"]:
+        automation_testing = AutomationTesting()
+        try:
+            data = await request.get_json()
+            if data is None:
+                raise TypeError("Missing JSON payload")
+            request_model = CheckRequestCodeRequest(**data)
+        except (ValidationError, TypeError) as e:
+            return await make_response(jsonify({"detail": str(e)}), 401)
+
+        response = await automation_testing.check_status_code(
+            expected_code=request_model.expected_code,
+            method=request_model.method,
+            url=request_model.url,
+            headers=request_model.headers,
+            body=request_model.body,
+        )
+        response.update({"valid": True})
+        return jsonify(response)
+    return await make_response(jsonify(result), 401)
 
 
 if __name__ == "__main__":
