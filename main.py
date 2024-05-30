@@ -253,6 +253,7 @@ async def fetch_many():
                 elif method == "DELETE":
                     async with request_session.delete(url, headers=headers) as response:
                         return await response.json()
+
             except aiohttp.ContentTypeError as e:
                 return await response.text()
 
@@ -262,7 +263,7 @@ async def fetch_many():
     # Run tasks concurrently and gather results
     responses = await asyncio.gather(*tasks)
 
-    return jsonify(responses)
+    return jsonify({"valid": True, "responses": responses})
 
 
 @app.route("/fetch-one", methods=["POST"])
@@ -295,25 +296,27 @@ async def fetch_one():
                     async with request_session.get(
                         url, json=data, headers=headers
                     ) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
                 elif method == "POST":
                     async with request_session.post(
                         url, json=data, headers=headers
                     ) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
                 elif method == "PUT":
                     async with request_session.put(
                         url, json=data, headers=headers
                     ) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
                 elif method == "DELETE":
                     async with request_session.delete(url, headers=headers) as response:
-                        return await response.json()
+                        response_data = await response.json()
             except aiohttp.ContentTypeError as e:
-                return await response.text()
+                response_data = await response.text()
+            return {"valid": True, "response": response_data}
+
     return jsonify(result)
 
 

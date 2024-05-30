@@ -431,7 +431,7 @@ RestAPI-Automation-Backend is a Flask-based RESTful API designed to handle user 
   }
   ```
 
-### 11. `/validate-response-body`
+### 12. `/validate-response-body`
 
 - **Method:** POST
 - **Description:**
