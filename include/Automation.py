@@ -68,7 +68,10 @@ class AutomationTesting:
                     async with request_session.delete(url, headers=headers) as response:
                         actual_code = response.status
                 else:
-                    return {"detail": "Unsupported HTTP method"}
+                    return {
+                        "passed": False,
+                        "detail": "Unsupported HTTP method",
+                    }
 
                 if actual_code == expected_code:
                     return {
@@ -123,29 +126,6 @@ class AutomationTesting:
                         "passed": False,
                     }
 
-                # Example JSON data
-                json_data1 = """{
-                    "name": "Alice",
-                    "age": 30,
-                    "address": {
-                        "city": "Wonderland",
-                        "zip": "12345"
-                    }
-                }"""
-
-                json_data2 = """{
-                    "name": "Bob",
-                    "age": 25,
-                    "address": {
-                        "city": "Builderland",
-                        "zip": "67890"
-                    }
-                }"""
-
-                # # Load JSON data
-                # data1 = json.loads(json_data1)
-                # data2 = json.loads(json_data2)
-
                 # Extract structures
                 structure1 = extract_structure(actual_body)
                 structure2 = extract_structure(expected_body_schema)
@@ -154,11 +134,13 @@ class AutomationTesting:
                 same_structure = compare_structures(structure1, structure2)
                 if same_structure:
                     return {
-                        "message": "Success: The response code matches the expected code and the body matches the expected schema.",
+                        "passed": True,
+                        "message": "Success: The response body matches the expected schema.",
                         "status_code": actual_code,
                         "response_body": actual_body,
                     }
                 return {
+                    "passed": False,
                     "message": "Failure: The response body does not match the expected schema.",
                     "status_code": actual_code,
                     "response_body": actual_body,
@@ -167,3 +149,53 @@ class AutomationTesting:
             except Exception as e:
                 print({"passed": False, "detail": str(e)})
                 return None
+
+    async def validate_response_body(
+        self, method, url, headers, body, expected_body=None
+    ):
+        async with aiohttp.ClientSession() as request_session:
+            try:
+                if method.upper() == "GET":
+                    async with request_session.get(
+                        url, headers=headers, json=body
+                    ) as response:
+                        actual_code = response.status
+                        actual_body = await response.json()
+                elif method.upper() == "POST":
+                    async with request_session.post(
+                        url, headers=headers, json=body
+                    ) as response:
+                        actual_code = response.status
+                        actual_body = await response.json()
+                elif method.upper() == "PUT":
+                    async with request_session.put(
+                        url, headers=headers, json=body
+                    ) as response:
+                        actual_code = response.status
+                        actual_body = await response.json()
+                elif method.upper() == "DELETE":
+                    async with request_session.delete(url, headers=headers) as response:
+                        actual_code = response.status
+                        actual_body = await response.json()
+                else:
+                    return {
+                        "detail": "Unsupported HTTP method",
+                        "passed": False,
+                    }
+                if actual_body == expected_body:
+                    return {
+                        "passed": True,
+                        "message": "Success: The response body matches the expected body.",
+                        "status_code": actual_code,
+                        "response_body": actual_body,
+                    }
+                return {
+                    "passed": False,
+                    "message": "Failure: The response body does not match the expected.",
+                    "status_code": actual_code,
+                    "response_body": actual_body,
+                }
+
+            except Exception as e:
+                print({"passed": False, "detail": str(e)})
+                return {"passed": False}
