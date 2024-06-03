@@ -44,16 +44,13 @@ class MongoDB(object):
         return "delated"
 
     async def set(self, key, value=None, where=None):
-        # Update data in Database
         if value:
             myquery = where
-
             newvalues = {"$set": {key: value}}
             await self.__dict__["collection"].update_many(myquery, newvalues)
             return f"{key} updated to {value}"
-        # Add new data in Database
-        await self.__dict__["collection"].insert_one(key)
-        return f"new data inserted {key}"
+        result = await self.__dict__["collection"].insert_one(key)
+        return result.inserted_id
 
     async def get(self, key=None, value=None, query=None):
         if query:

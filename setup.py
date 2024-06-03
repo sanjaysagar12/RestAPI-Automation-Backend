@@ -37,6 +37,7 @@ async def ensure_indexes():
     users_collection = database.get_collection("users")
     api_keys_collection = database.get_collection("api_keys")
     api_end_point_collection = database.get_collection("api_end_point")
+    workspace_collection = database.get_collection("workspace")
     # Ensure unique indexes
     await staging_collection.create_index([("username", ASCENDING)], unique=True)
     await staging_collection.create_index([("email", ASCENDING)], unique=True)

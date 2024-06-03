@@ -361,6 +361,21 @@ async def history():
     return result
 
 
+@app.route("/create-workspace", methods=["POST"])
+async def create_workflow():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    if result["valid"]:
+        pass
+
+
 @app.route("/workflow", methods=["POST"])
 async def run_workflow():
     token = request.headers.get("Token")
