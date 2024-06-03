@@ -21,7 +21,7 @@ class WorkspaceManager:
         self.client = motor.motor_asyncio.AsyncIOMotorClient(
             f"mongodb://{db_username}:{db_password}@{db_hostname}:{db_port}/"
         )
-        self.db = self.client["admin"]
+        self.db = self.client[db_name]
         self.workspaces_collection = self.db["workspaces"]
 
     async def create_workspace(self, owner_email, workspace_name):
@@ -30,22 +30,15 @@ class WorkspaceManager:
             "name": workspace_name,
             "collaborators": [],
             "global_variables": [],
-            "folders": {},
+            "storage": [],
         }
         result = await self.workspaces_collection.insert_one(workspace)
-        return result.inserted_id
+        return str(result.inserted_id)  # Ensure the ID is returned as a string
 
     async def add_collaborator(self, workspace_id, collaborator_email):
         result = await self.workspaces_collection.update_one(
             {"_id": ObjectId(workspace_id)},
             {"$addToSet": {"collaborators": collaborator_email}},
-        )
-        return result.modified_count
-
-    async def create_folder(self, workspace_id, folder_name):
-        result = await self.workspaces_collection.update_one(
-            {"_id": ObjectId(workspace_id)},
-            {"$set": {f"folders.{folder_name}": {"variables": [], "folder_data": []}}},
         )
         return result.modified_count
 
@@ -56,37 +49,36 @@ class WorkspaceManager:
         )
         return result.modified_count
 
-    async def add_folder_variable(self, workspace_id, folder_name, variable):
+    async def add_storage_entry(self, workspace_id, storage_entry):
         result = await self.workspaces_collection.update_one(
             {"_id": ObjectId(workspace_id)},
-            {"$addToSet": {f"folders.{folder_name}.variables": variable}},
+            {"$push": {"storage": storage_entry}},
         )
         return result.modified_count
 
-    async def add_folder_data(self, workspace_id, folder_name, folder_data):
-        result = await self.workspaces_collection.update_one(
-            {"_id": ObjectId(workspace_id)},
-            {"$push": {f"folders.{folder_name}.folder_data": folder_data}},
-        )
-        return result.modified_count
-
-    async def add_local_variable(
-        self, workspace_id, folder_name, request_id, local_variable
-    ):
+    async def add_local_variable(self, workspace_id, storage_id, local_variable):
         result = await self.workspaces_collection.update_one(
             {
                 "_id": ObjectId(workspace_id),
-                f"folders.{folder_name}.folder_data._id": request_id,
+                "storage._id": storage_id,
             },
             {
                 "$set": {
-                    f"folders.{folder_name}.folder_data.$.local_variables.{list(local_variable.keys())[0]}": list(
+                    f"storage.$.local_variables.{list(local_variable.keys())[0]}": list(
                         local_variable.values()
-                    )[
-                        0
-                    ]
+                    )[0]
                 }
             },
+        )
+        return result.modified_count
+
+    async def change_storage_path(self, workspace_id, storage_id, new_path):
+        result = await self.workspaces_collection.update_one(
+            {
+                "_id": ObjectId(workspace_id),
+                "storage._id": storage_id,
+            },
+            {"$set": {"storage.$.path": new_path}},
         )
         return result.modified_count
 
@@ -110,23 +102,14 @@ async def main():
     )
     print(f"Collaborator added: {modified_count} document(s) modified")
 
-    # Create a new folder in the workspace
-    modified_count = await manager.create_folder(workspace_id, "new_folder")
-    print(f"New folder created: {modified_count} document(s) modified")
-
     # Add a global variable to the workspace
     modified_count = await manager.add_global_variable(workspace_id, {"var1": 100})
     print(f"Global variable added: {modified_count} document(s) modified")
 
-    # Add a variable to a specific folder
-    modified_count = await manager.add_folder_variable(
-        workspace_id, "new_folder", {"var2": 200}
-    )
-    print(f"Folder variable added: {modified_count} document(s) modified")
-
-    # Add data to a specific folder
-    folder_data = {
+    # Add a storage entry to the workspace
+    storage_entry = {
         "_id": "unique_id_123",
+        "path": "/folder1",
         "request": {
             "method": "post",
             "url": "http://example.com",
@@ -139,15 +122,20 @@ async def main():
         },
         "local_variables": {},
     }
-    modified_count = await manager.add_folder_data(
-        workspace_id, "new_folder", folder_data
-    )
-    print(f"Folder data added: {modified_count} document(s) modified")
+    modified_count = await manager.add_storage_entry(workspace_id, storage_entry)
+    print(f"Storage entry added: {modified_count} document(s) modified")
 
-    # Add a new local variable to the specific request within the folder
+    # Change the path of the storage entry
+    new_path = "/new_folder"
+    modified_count = await manager.change_storage_path(
+        workspace_id, "unique_id_123", new_path
+    )
+    print(f"Storage path changed: {modified_count} document(s) modified")
+
+    # Add a new local variable to the specific request within the storage entry
     local_variable = {"local_var3": "value3"}
     modified_count = await manager.add_local_variable(
-        workspace_id, "new_folder", "unique_id_123", local_variable
+        workspace_id, "unique_id_123", local_variable
     )
     print(f"Local variable added: {modified_count} document(s) modified")
 
