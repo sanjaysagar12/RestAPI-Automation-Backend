@@ -1,5 +1,7 @@
 import aiohttp
 import json
+import asyncio
+import re
 
 
 def extract_structure(data, structure=None):
@@ -220,3 +222,14 @@ class AutomationTesting:
             if expected_header_element in actual_headers:
                 return True
             return False
+
+    async def check_html_response(self, response_text):
+        try:
+            # Check if the response starts with a valid HTML tag
+            html_tag_pattern = r'^<\s*(!DOCTYPE\s*html|html|body|head|title|script|style)'
+            if re.match(html_tag_pattern, response_text, re.IGNORECASE):
+                return "The response is in HTML format."
+            else:
+                return "The response is not in HTML format."
+        except Exception as e:
+            return f"Error: {str(e)}"
