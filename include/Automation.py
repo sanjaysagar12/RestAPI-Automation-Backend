@@ -244,3 +244,20 @@ class AutomationTesting:
                 return "The response is not in XML format."
         except Exception as e:
             return f"Error: {str(e)}"
+        
+    async def check_json_key_value(self, response_text, key, expected_value):
+        # Check if the response is a valid JSON
+        if await self.check_valid_json(response_text):
+            # Parse the response as JSON
+            response_json = json.loads(response_text)
+
+            # Check if the key exists in the JSON
+            if key in response_json:
+                # Check if the value matches the expected value
+                if response_json[key] == expected_value:
+                    return "The JSON response contains the expected key-value pair."
+                else:
+                    return f"The value for the key '{key}' does not match the expected value."
+            else:
+                return f"The JSON response does not contain the key '{key}'."
+        
