@@ -1,16 +1,29 @@
+import json
+
+global_variable = {}
 flow = {
     "request": {
         "method": "POST",
         "url": "http://localhost:8000/login",
-        "body": {
-            "email": "pvtnsanjaysagarlearn@gmail.com",
+        "variables": {
+            "email": "pvtnsanjaysagar",
             "password": "12345",
+        },
+        "body": {
+            "test1": {
+                "test2": ["2", "<<email>>"],
+            },
+            "password": "<<password>>",
         },
         "headers": {},
     },
     "testcase": "2",
     "true": {
         "request": {
+            "variables": {
+                "email": "pvtnsanjaysagar",
+                "password": "12345",
+            },
             "method": "get",
             "url": "http://localhost:8000/profile",
         },
@@ -19,6 +32,10 @@ flow = {
         "false": {
             "true": {
                 "request": {
+                    "variables": {
+                        "email": "pvtnsanjaysagar",
+                        "password": "12345",
+                    },
                     "method": "get",
                     "url": "http://localhost:8000/dashboard",
                 },
@@ -30,12 +47,20 @@ flow = {
     },
     "false": {
         "request": {
+            "variables": {
+                "email": "pvtnsanjaysagar",
+                "password": "12345",
+            },
             "method": "get",
             "url": "http://localhost:8000/register",
         },
         "testcase": "1",
         "true": {
             "request": {
+                "variables": {
+                    "email": "pvtnsanjaysagar",
+                    "password": "12345",
+                },
                 "method": "get",
                 "url": "http://localhost:8000/dashboard",
             },
@@ -52,17 +77,25 @@ import requests
 
 
 def execute_flow(flow):
-
-    # Base case: if the flow is empty, return
-    if not flow:
+    if flow == {}:
+        print("end")
         return
-
     try:
-        # Extract the request data
-        method = flow["request"]["method"]
-        url = flow["request"]["url"]
-    except KeyError as e:
 
+        local_variables = flow["request"]["variables"]
+        request_data = flow["request"]
+        request_data = json.dumps(request_data)
+
+        for variable in local_variables:
+            request_data = request_data.replace(
+                f"<<{variable}>>", local_variables[variable]
+            )
+        request_data = json.loads(request_data)
+        # Extract the request data
+        method = request_data["method"]
+        url = request_data["url"]
+
+    except KeyError as e:
         return
 
     # Send the request
