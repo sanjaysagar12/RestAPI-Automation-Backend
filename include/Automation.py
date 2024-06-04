@@ -233,3 +233,14 @@ class AutomationTesting:
                 return "The response is not in HTML format."
         except Exception as e:
             return f"Error: {str(e)}"
+        
+    async def check_xml_response(self, response_text):
+        try:
+            # Check if the response starts with an XML declaration
+            xml_declaration_pattern = r'^<\?xml\s+version\s*=\s*"[^"]*"'
+            if re.match(xml_declaration_pattern, response_text, re.IGNORECASE):
+                return "The response is in XML format."
+            else:
+                return "The response is not in XML format."
+        except Exception as e:
+            return f"Error: {str(e)}"
