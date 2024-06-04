@@ -199,3 +199,19 @@ class AutomationTesting:
             except Exception as e:
                 print({"passed": False, "detail": str(e)})
                 return {"passed": False}
+            
+    async def check_valid_json(self, response):
+            try:
+                # Try to parse the response as JSON
+                json_response = json.loads(response)
+                # If parsing succeeds, the response is in JSON format
+                print("Response is in JSON format.")
+                # Process the JSON response as needed
+                # ...
+                return True
+            except json.JSONDecodeError:
+                # If parsing fails, the response is not in JSON format
+                print("Response is not in JSON format.")
+                # Handle the non-JSON response as needed
+                # ...
+                return False
