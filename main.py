@@ -1,5 +1,6 @@
 import asyncio
 import json
+import secrets
 import sys
 import os
 import datetime
@@ -7,7 +8,7 @@ import aiohttp
 from pydantic import EmailStr, BaseModel, ValidationError
 from quart import Quart, request, jsonify, make_response
 from quart_cors import cors
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 root_path = os.path.dirname(__file__)
 
@@ -20,6 +21,7 @@ app = cors(
     allow_headers=["Content-Type", "Token"],
 )
 
+
 # Load configuration from config.json
 with open(f"{root_path}/config.json", "r") as config_file:
     config = json.load(config_file)
@@ -31,8 +33,10 @@ from Authentication import Authentication  # type: ignore
 from EMail import EMail  # type: ignore
 from EndPoint import EndPoint  # type: ignore
 from WorkFlow import WorkFlow  # type: ignore
+from Workspace import WorkspaceManager  # type: ignore
 from Automation import AutomationTesting  # type: ignore
 
+workspacemanager = WorkspaceManager()
 email = EMail()
 session = Session()
 
@@ -42,6 +46,20 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     username: str
     password: str
+
+
+class CreateWorkspaceRequest(BaseModel):
+    name: str
+    collaborator: Optional[List[str]] = None
+
+
+class SaveToWorkspaceRequest(BaseModel):
+    workspace_id: str
+    request: Dict
+    response: Dict
+    path: str
+    test_cases: Optional[List[str]] = []
+    variables: Optional[Dict[str, Any]] = {}
 
 
 class FetchOneRequest(BaseModel):
@@ -320,8 +338,8 @@ async def fetch_one():
     return jsonify(result)
 
 
-@app.route("/save-response", methods=["POST"])
-async def save_response():
+@app.route("/save-to-workspace", methods=["POST"])
+async def save_to_workspace():
     token = request.headers.get("Token")
     client_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
@@ -332,12 +350,21 @@ async def save_response():
     )
     print(result)
     if result["valid"]:
-        save_data = await request.get_json()
-        request_data = save_data["request"]
-        response_data = save_data["response"]
-        email = await session.get("email")
-        api_endpoint = EndPoint(email)
-        await api_endpoint.set(request=request_data, response=response_data)
+        request_data = await request.get_json()
+        save_data = SaveToWorkspaceRequest(**request_data)
+
+        # Add a storage entry to the workspace
+        storage_entry = {
+            "_id": secrets.token_hex(16),
+            "path": save_data.path,
+            "test_cases": save_data.test_cases,
+            "request": save_data.response,
+            "response": save_data.response,
+            "local_variables": save_data.variables,
+        }
+        modified_count = await workspacemanager.add_storage_entry(
+            save_data.workspace_id, storage_entry
+        )
         return {"valid": True, "message": "data saved"}
     return result
 
@@ -373,7 +400,12 @@ async def create_workflow():
     )
 
     if result["valid"]:
-        pass
+        response_data = await request.get_json()
+        create_workflow_data = CreateWorkspaceRequest(**response_data)
+        workspace_id = await workspacemanager.create_workspace(
+            await session.get("email"), create_workflow_data.name
+        )
+        return {"valid": True, "workspace_id": workspace_id}
 
 
 @app.route("/workflow", methods=["POST"])
