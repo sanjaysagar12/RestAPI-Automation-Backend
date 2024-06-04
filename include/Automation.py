@@ -215,3 +215,8 @@ class AutomationTesting:
                 # Handle the non-JSON response as needed
                 # ...
                 return False
+
+    async def check_header_element(self, actual_headers, expected_header_element):
+            if expected_header_element in actual_headers:
+                return True
+            return False
