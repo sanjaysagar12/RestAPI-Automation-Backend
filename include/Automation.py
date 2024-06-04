@@ -261,3 +261,16 @@ class AutomationTesting:
             else:
                 return f"The JSON response does not contain the key '{key}'."
         
+    async def check_json_key_value(self, response_text, key="token"):
+        # Check if the response is a valid JSON
+        if await self.check_valid_json(response_text):
+            # Parse the response as JSON
+            response_json = json.loads(response_text)
+
+            # Check if the key exists in the JSON
+            if key in response_json:
+                return f"The JSON response contains the key '{key}'."
+            else:
+                return f"The JSON response does not contain the key '{key}'."
+        else:
+            return "The response is not in JSON format."
