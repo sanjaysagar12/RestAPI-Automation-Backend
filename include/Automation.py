@@ -383,3 +383,17 @@ class AutomationTesting:
                 "message": f"Failure: The response time ({response_time:.2f} ms) is not less than {max_time} ms.",
                 "response_time": response_time
             }
+        
+    async def verify_successful_post_request(self, status_code, expected_status_code=201):
+        if status_code == expected_status_code:
+            return {
+                "passed": True,
+                "status_code": status_code,
+                "message": "Success: The POST request was successful with the expected status code."
+            }
+        else:
+            return {
+                "passed": False,
+                "status_code": status_code,
+                "message": f"Failure: Expected status code {expected_status_code}, but got {status_code}"
+            }
