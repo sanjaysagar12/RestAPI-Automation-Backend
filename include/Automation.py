@@ -43,59 +43,6 @@ class AutomationTesting:
     def __init__(self) -> None:
         pass
 
-    async def check_status_code(self, expected_code, method, url, headers, body):
-        async with aiohttp.ClientSession() as request_session:
-            try:
-                if method.upper() == "GET":
-                    async with request_session.get(
-                        url,
-                        headers=headers,
-                        json=body,
-                    ) as response:
-                        actual_code = response.status
-                elif method.upper() == "POST":
-                    async with request_session.post(
-                        url,
-                        headers=headers,
-                        json=body,
-                    ) as response:
-                        actual_code = response.status
-                elif method.upper() == "PUT":
-                    async with request_session.put(
-                        url,
-                        headers=headers,
-                        json=body,
-                    ) as response:
-                        actual_code = response.status
-                elif method.upper() == "DELETE":
-                    async with request_session.delete(url, headers=headers) as response:
-                        actual_code = response.status
-                else:
-                    return {
-                        "passed": False,
-                        "detail": "Unsupported HTTP method",
-                    }
-
-                if actual_code == expected_code:
-                    return {
-                        "passed": True,
-                        "message": "Success: The response code matches the expected code.",
-                        "status_code": actual_code,
-                    }
-
-                else:
-                    return {
-                        "passed": False,
-                        "message": "Failure: The response code does not match the expected code.",
-                        "status_code": actual_code,
-                    }
-
-            except Exception as e:
-                return {
-                    "passed": False,
-                    "detail": str(e),
-                }
-
     async def validate_response_schema(self, actual_body, expected_body_schema):
         # Extract structures
         structure1 = extract_structure(actual_body)
@@ -115,55 +62,18 @@ class AutomationTesting:
             "response_body": actual_body,
         }
 
-    async def validate_response_body(
-        self, method, url, headers, body, expected_body=None
-    ):
-        async with aiohttp.ClientSession() as request_session:
-            try:
-                if method.upper() == "GET":
-                    async with request_session.get(
-                        url, headers=headers, json=body
-                    ) as response:
-                        actual_code = response.status
-                        actual_body = await response.json()
-                elif method.upper() == "POST":
-                    async with request_session.post(
-                        url, headers=headers, json=body
-                    ) as response:
-                        actual_code = response.status
-                        actual_body = await response.json()
-                elif method.upper() == "PUT":
-                    async with request_session.put(
-                        url, headers=headers, json=body
-                    ) as response:
-                        actual_code = response.status
-                        actual_body = await response.json()
-                elif method.upper() == "DELETE":
-                    async with request_session.delete(url, headers=headers) as response:
-                        actual_code = response.status
-                        actual_body = await response.json()
-                else:
-                    return {
-                        "detail": "Unsupported HTTP method",
-                        "passed": False,
-                    }
-                if actual_body == expected_body:
-                    return {
-                        "passed": True,
-                        "message": "Success: The response body matches the expected body.",
-                        "status_code": actual_code,
-                        "response_body": actual_body,
-                    }
-                return {
-                    "passed": False,
-                    "message": "Failure: The response body does not match the expected.",
-                    "status_code": actual_code,
-                    "response_body": actual_body,
-                }
-
-            except Exception as e:
-                print({"passed": False, "detail": str(e)})
-                return {"passed": False}
+    async def validate_response_body(self, actual_body, expected_body=None):
+        if actual_body == expected_body:
+            return {
+                "passed": True,
+                "message": "Success: The response body matches the expected body.",
+                "response_body": actual_body,
+            }
+        return {
+            "passed": False,
+            "message": "Failure: The response body does not match the expected.",
+            "response_body": actual_body,
+        }
             
     async def check_valid_json(self, response):
             try:
