@@ -274,3 +274,40 @@ class AutomationTesting:
                 return f"The JSON response does not contain the key '{key}'."
         else:
             return "The response is not in JSON format."
+        
+    async def send_request(self, method, url, headers=None, body=None):
+        async with aiohttp.ClientSession() as request_session:
+            try:
+                if method.upper() == "GET":
+                    async with request_session.get(url, headers=headers, json=body) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                elif method.upper() == "POST":
+                    async with request_session.post(url, headers=headers, json=body) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                elif method.upper() == "PUT":
+                    async with request_session.put(url, headers=headers, json=body) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                elif method.upper() == "DELETE":
+                    async with request_session.delete(url, headers=headers) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                else:
+                    return {
+                        "passed": False,
+                        "detail": "Unsupported HTTP method",
+                    }
+
+                return {
+                    "passed": True,
+                    "status_code": status_code,
+                    "response_body": response_body,
+                }
+
+            except Exception as e:
+                return {
+                    "passed": False,
+                    "detail": str(e),
+                }
