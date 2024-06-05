@@ -3,3 +3,4 @@ __pycache__/
 test.py
 include/test.py
 test2.py
+.vscode/

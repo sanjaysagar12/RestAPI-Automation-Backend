@@ -1,9 +1,14 @@
 import asyncio
 import json
+import aiohttp
+from Automation import AutomationTesting
 
+# Global variable to store shared data
 global_variable = {}
+
+# Define the flow of API calls and tests
 flow = {
-    "tag":"login",
+    "tag": "login",
     "request": {
         "method": "POST",
         "url": "http://localhost:8000/login",
@@ -12,20 +17,19 @@ flow = {
             "password": "12345",
         },
         "body": {
-            "email":"<<email>>",
+            "email": "<<email>>",
             "password": "<<password>>",
         },
         "headers": {},
     },
     "testcase": [
         {
-            "case": "chack_status_200",
+            "case": "check_status_200",
             "data": None,
         },
-      
     ],
     "true": {
-        "tag":"profile",
+        "tag": "profile",
         "request": {
             "variables": {
                 "email": "pvtnsanjaysagar",
@@ -36,11 +40,11 @@ flow = {
         },
         "testcase": [
             {
-                "case": "chack_status_200",
+                "case": "check_status_200",
                 "data": None,
             },
             {
-                "case": "chack_status_200",
+                "case": "check_status_200",
                 "data": {
                     "valid": True,
                     "token": "dkqnweoidj2939023i0923u09",
@@ -49,35 +53,34 @@ flow = {
         ],
         "true": {},
         "false": {
-            
-                "tag":"dashboard",
-                "request": {
-                    "variables": {
-                        "email": "pvtnsanjaysagar",
-                        "password": "12345",
-                    },
-                    "method": "get",
-                    "url": "http://localhost:8000/dashboard",
+            "tag": "dashboard",
+            "request": {
+                "variables": {
+                    "email": "pvtnsanjaysagar",
+                    "password": "12345",
                 },
-                "testcase": [
-                    {
-                        "case": "chack_status_200",
-                        "data": None,
+                "method": "get",
+                "url": "http://localhost:8000/dashboard",
+            },
+            "testcase": [
+                {
+                    "case": "check_status_200",
+                    "data": None,
+                },
+                {
+                    "case": "check_body_shema",
+                    "data": {
+                        "valid": True,
+                        "token": "dkqnweoidj2939023i0923u09",
                     },
-                    {
-                        "case": "check_body_shema",
-                        "data": {
-                            "valid": True,
-                            "token": "dkqnweoidj2939023i0923u09",
-                        },
-                    },
-                ],
-                "true": {},
-                "false": {},
+                },
+            ],
+            "true": {},
+            "false": {},
         },
     },
     "false": {
-        "tag":"register",
+        "tag": "register",
         "request": {
             "variables": {
                 "email": "pvtnsanjaysagar",
@@ -100,7 +103,7 @@ flow = {
             },
         ],
         "true": {
-            "tag":"dashboard2",
+            "tag": "dashboard2",
             "request": {
                 "variables": {
                     "email": "pvtnsanjaysagar",
@@ -129,119 +132,83 @@ flow = {
     },
 }
 
-
-import aiohttp
-import requests
-from Automation import AutomationTesting
-
-flow_response = []
+flow_response = list()
 
 
+# Function to execute the flow of API calls and tests
 async def execute_flow(flow):
-
-
-    test_result = []
-
-    if flow == {}:
-        print("end")
+    if not flow:
+        print("End of flow.")
         return
+
     try:
-
+        # Prepare the request data
         local_variables = flow["request"]["variables"]
-        request_data = flow["request"]
-        request_data = json.dumps(request_data)
+        request_data = json.dumps(flow["request"])
 
-        for variable in local_variables:
-            request_data = request_data.replace(
-                f"<<{variable}>>", local_variables[variable]
-            )
-        for variable in global_variable:
-            request_data = request_data.replace(
-                f"<<{variable}>>", local_variables[variable]
-            )
+        # Replace placeholders with actual values
+        for variable, value in local_variables.items():
+            request_data = request_data.replace(f"<<{variable}>>", value)
 
         request_data = json.loads(request_data)
-        test_cases = flow["testcase"]
-        tag = flow["tag"]
-        # Extract the request data
         method = request_data["method"]
         url = request_data["url"]
-        headers = request_data["headers"]
-        body = request_data['body']
-    except KeyError as e:
-        print(e)
-        headers = {}
-        body = {}
-       
+        headers = request_data.get("headers", {})
+        body = request_data.get("body", {})
+        try:
+            # Send the request and get the response
+            async with aiohttp.ClientSession() as session:
+                response = await send_request(session, method, url, headers, body)
+                response_data = await response.json()
+        except aiohttp.client_exceptions.ContentTypeError as e:
+            response_data = await response.text()
+        # Run test cases
+        test_cases = flow["testcase"]
+        automation_testing = AutomationTesting(response)
+        test_result = await automation_testing.run(test_cases)
+        is_passed = test_result["passed_all"]
 
-    # Send the request
-    try:
-        async with aiohttp.ClientSession() as request_session:
-            try:
-                if method.upper() == "GET":
-                    async with request_session.get(url, headers=headers, json=body) as response:
-                    
-                        response_data = await response.json()
-                elif method.upper() == "POST":
-                    async with request_session.post(url, headers=headers, json=body) as response:
-                      
-                        response_data = await response.json()
-                elif method.upper() == "PUT":
-                    async with request_session.put(url, headers=headers, json=body) as response:
-                       
-                        response_data = await response.json()
-                elif method.upper() == "DELETE":
-                    async with request_session.delete(url, headers=headers) as response:
-                  
-                        response_data = await response.json()
-                else:
-                    return {
-                        "passed": False,
-                        "detail": "Unsupported HTTP method",
-                    }
+        # Log the results
+        tag = flow["tag"]
+        log_flow_response(tag, response_data, test_result)
 
-
-            except aiohttp.ContentTypeError as e:
-                response_data = await response.text()
-            
-        automationtesting = AutomationTesting(response)
-    
-        data = await automationtesting.run(test_cases)
-        is_passed = data["passed_all"]
-       
-        test_result.append(data)
-        flow_response.append({
-            "tag":tag,
-            "response":response_data,
-            "test_result":test_result
-        })
-      
-        # Check the testcase and decide which path to follow
-        if is_passed:
-            next_flow = flow.get("true", {})
-        else:
-            next_flow = flow.get("false", {})
-
-        # Recursively execute the next part of the flow
+        # Determine the next flow based on the test result
+        next_flow = flow["true"] if is_passed else flow.get("false", {})
         await execute_flow(next_flow)
+
     except aiohttp.client_exceptions.ClientConnectorError as e:
-        print(e)
-        flow_response.append({
-            "tag":tag,
-            "response":f"Cannot connect to host at {url}",
-            "test_result":None
-        })
-        return f"Cannot connect to host at {url}"
+        print(f"Connection error: {e}")
+        log_flow_response(flow["tag"], f"Cannot connect to host at {url}", None)
 
 
-# # Example usage:
-# flow = {
-#     # Your flow structure here
-# }
+# Helper function to send HTTP requests
+async def send_request(session, method, url, headers, body):
+    method = method.upper()
+    if method == "GET":
+        return await session.get(url, headers=headers, json=body)
+    elif method == "POST":
+        return await session.post(url, headers=headers, json=body)
+    elif method == "PUT":
+        return await session.put(url, headers=headers, json=body)
+    elif method == "DELETE":
+        return await session.delete(url, headers=headers)
+    else:
+        raise ValueError("Unsupported HTTP method")
 
 
+# Helper function to log the flow response
+def log_flow_response(tag, response_data, test_result):
+    flow_response.append(
+        {"tag": tag, "response": response_data, "test_result": test_result}
+    )
+
+
+# Main function to start the flow execution
 async def main():
     await execute_flow(flow)
+    print(json.dumps({"flow_response": flow_response}, indent=4))
 
-    print(json.dumps({"flow_response":flow_response},indent=4))
-asyncio.run(main())
+
+# Execute the main function
+if __name__ == "__main__":
+    asyncio.run(main())
