@@ -271,30 +271,22 @@ class AutomationTesting:
             }
         
 
-    async def convert_xml_to_json(self, response):
-        try:
-            response_text = await response.text()
+    async def convert_xml_to_json(self, response_text):
+        # Check if the response is in XML format
+        if await self.check_xml_response(response_text) == "The response is in XML format.":
+            # Convert the XML response to a Python dictionary
+            xml_dict = xmltodict.parse(response_text)
 
-            # Check if the response is in XML format
-            if await self.check_xml_response(response_text) == "The response is in XML format.":
-                # Convert the XML response to a Python dictionary
-                xml_dict = xmltodict.parse(response_text)
+            # Convert the dictionary to a JSON string
+            json_str = json.dumps(xml_dict, indent=4)
 
-                # Convert the dictionary to a JSON string
-                json_str = json.dumps(xml_dict, indent=4)
-
-                return {
-                    "passed": True,
-                    "message": "Success: The XML response was successfully converted to a JSON object.",
-                    "json_object": json_str
-                }
-            else:
-                return {
-                    "passed": False,
-                    "message": "Failure: The response is not in XML format. Cannot convert to JSON."
-                }
-        except Exception as e:
+            return {
+                "passed": True,
+                "message": "Success: The XML response was successfully converted to a JSON object.",
+                "json_object": json_str
+            }
+        else:
             return {
                 "passed": False,
-                "detail": str(e)
+                "message": "Failure: The response is not in XML format. Cannot convert to JSON."
             }
