@@ -40,9 +40,9 @@ def compare_structures(struct1, struct2):
 
 
 class AutomationTesting:
-    def __init__(self) -> None:
-        pass
-
+    def __init__(self,response) -> None:
+ 
+        self.response = response
     async def validate_response_schema(self, actual_body, expected_body_schema):
         # Extract structures
         structure1 = extract_structure(actual_body)
@@ -184,7 +184,11 @@ class AutomationTesting:
                     "passed": False,
                     "detail": str(e),
                 }
-            
+    async def check_status_200(self):
+        if self.response.status == 200:
+            return True
+        return False
+    
     async def status_code(self, method, url, headers=None, body=None, expected_status_code=200):
         async with aiohttp.ClientSession() as request_session:
             try:
@@ -290,3 +294,18 @@ class AutomationTesting:
                 "passed": False,
                 "message": "Failure: The response is not in XML format. Cannot convert to JSON."
             }
+    async def run(self,test_case_list):
+        # print(test_case_list)
+        case_result = {"passed_all":True}
+        for test_case in test_case_list:
+            # print(test_case)
+            # print(test_case['case'])
+            if test_case['case'] == "chack_status_200":
+                # print("ok")
+                result = await self.check_status_200()
+                case_result.update({"chack_status_200":result})
+                # print(result)
+                if not result:
+                    case_result["passed_all"]=False
+            
+        return case_result
