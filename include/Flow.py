@@ -90,6 +90,10 @@ def execute_flow(flow):
             request_data = request_data.replace(
                 f"<<{variable}>>", local_variables[variable]
             )
+        for variable in global_variable:
+            request_data = request_data.replace(
+                f"<<{variable}>>", local_variables[variable]
+            )
         request_data = json.loads(request_data)
         # Extract the request data
         method = request_data["method"]
