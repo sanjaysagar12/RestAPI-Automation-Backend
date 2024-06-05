@@ -1,3 +1,4 @@
+import time
 import aiohttp
 import json
 import asyncio
@@ -367,4 +368,18 @@ class AutomationTesting:
             return {
                 "passed": False,
                 "message": f"Response body does not contain the expected string: {expected_string}",
+            }
+        
+    async def response_time_less_than(self, response_time, max_time=200):
+        if response_time <= max_time:
+            return {
+                "passed": True,
+                "message": f"Success: The response time ({response_time:.2f} ms) is less than {max_time} ms.",
+                "response_time": response_time
+            }
+        else:
+            return {
+                "passed": False,
+                "message": f"Failure: The response time ({response_time:.2f} ms) is not less than {max_time} ms.",
+                "response_time": response_time
             }
