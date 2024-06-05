@@ -356,3 +356,15 @@ class AutomationTesting:
                     "passed": False,
                     "detail": str(e),
                 }
+            
+    async def response_body_contains_string(self, response_body, expected_string=None):
+        if expected_string is not None and expected_string in response_body:
+            return {
+                "passed": True,
+                "message": f"Response body contains the expected string: {expected_string}",
+            }
+        else:
+            return {
+                "passed": False,
+                "message": f"Response body does not contain the expected string: {expected_string}",
+            }
