@@ -311,3 +311,48 @@ class AutomationTesting:
                     "passed": False,
                     "detail": str(e),
                 }
+            
+    async def status_code(self, method, url, headers=None, body=None, expected_status_code=200):
+        async with aiohttp.ClientSession() as request_session:
+            try:
+                if method.upper() == "GET":
+                    async with request_session.get(url, headers=headers, json=body) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                elif method.upper() == "POST":
+                    async with request_session.post(url, headers=headers, json=body) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                elif method.upper() == "PUT":
+                    async with request_session.put(url, headers=headers, json=body) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                elif method.upper() == "DELETE":
+                    async with request_session.delete(url, headers=headers) as response:
+                        status_code = response.status
+                        response_body = await response.text()
+                else:
+                    return {
+                        "passed": False,
+                        "detail": "Unsupported HTTP method",
+                    }
+
+                if status_code == expected_status_code:
+                    return {
+                        "passed": True,
+                        "status_code": status_code,
+                        "response_body": response_body,
+                    }
+                else:
+                    return {
+                        "passed": False,
+                        "message": f"Expected status code {expected_status_code}, but got {status_code}",
+                        "status_code": status_code,
+                        "response_body": response_body,
+                    }
+
+            except Exception as e:
+                return {
+                    "passed": False,
+                    "detail": str(e),
+                }
