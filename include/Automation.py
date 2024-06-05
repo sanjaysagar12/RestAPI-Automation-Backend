@@ -3,7 +3,7 @@ import aiohttp
 import json
 import asyncio
 import re
-
+import xmltodict
 
 def extract_structure(data, structure=None):
     if structure is None:
@@ -396,4 +396,33 @@ class AutomationTesting:
                 "passed": False,
                 "status_code": status_code,
                 "message": f"Failure: Expected status code {expected_status_code}, but got {status_code}"
+            }
+        
+
+    async def convert_xml_to_json(self, response):
+        try:
+            response_text = await response.text()
+
+            # Check if the response is in XML format
+            if await self.check_xml_response(response_text) == "The response is in XML format.":
+                # Convert the XML response to a Python dictionary
+                xml_dict = xmltodict.parse(response_text)
+
+                # Convert the dictionary to a JSON string
+                json_str = json.dumps(xml_dict, indent=4)
+
+                return {
+                    "passed": True,
+                    "message": "Success: The XML response was successfully converted to a JSON object.",
+                    "json_object": json_str
+                }
+            else:
+                return {
+                    "passed": False,
+                    "message": "Failure: The response is not in XML format. Cannot convert to JSON."
+                }
+        except Exception as e:
+            return {
+                "passed": False,
+                "detail": str(e)
             }
