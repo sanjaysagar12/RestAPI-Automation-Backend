@@ -24,7 +24,19 @@ db = client[db_name]
 workspaces_collection = db["workspaces"]
 
 
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
 class WorkspaceManager:
+    async def is_owner(self, workspace_id, email):
+        data = await workspaces_collection.find_one({"_id": ObjectId(workspace_id)})
+        if data["owner"] == email:
+            return True
+        return False
 
     async def create_workspace(self, owner_email, workspace_name):
         workspace = {
@@ -37,11 +49,12 @@ class WorkspaceManager:
         result = await workspaces_collection.insert_one(workspace)
         return str(result.inserted_id)  # Ensure the ID is returned as a string
 
-    async def add_collaborator(self, workspace_id, collaborator_email):
-        result = await workspaces_collection.update_one(
-            {"_id": ObjectId(workspace_id)},
-            {"$addToSet": {"collaborators": collaborator_email}},
-        )
+    async def add_collaborator(self, workspace_id, collaborators):
+        for email in collaborators:
+            result = await workspaces_collection.update_one(
+                {"_id": ObjectId(workspace_id)},
+                {"$addToSet": {"collaborators": email}},
+            )
         return result.modified_count
 
     async def add_global_variable(self, workspace_id, variable):
@@ -83,6 +96,13 @@ class WorkspaceManager:
             {"$set": {"storage.$.path": new_path}},
         )
         return result.modified_count
+
+    async def get_workspace(self, workspace_id, email):
+        data = await workspaces_collection.find_one({"_id": ObjectId(workspace_id)})
+        print(json.dumps(data, cls=CustomJSONEncoder, indent=4))
+        if data["owner"] == email or email in data["collaborators"]:
+            return json.loads(json.dumps(data, cls=CustomJSONEncoder))
+        return {"error": "workspace not found"}
 
 
 # # Usage examples
