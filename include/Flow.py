@@ -27,28 +27,30 @@ flow = {
             "case": "check_status_200",
             "data": None,
         },
+        {
+            "case": "set_global_variable",
+            "data": {"var": 1},
+        },
+        {
+            "case": "set_global_variable_from_response",
+            "data": {
+                "key": "token",
+                "value": "response['token']",
+            },
+        },
     ],
     "true": {
         "tag": "profile",
         "request": {
-            "variables": {
-                "email": "pvtnsanjaysagar",
-                "password": "12345",
-            },
-            "method": "get",
+            "variables": {},
+            "method": "POST",
             "url": "http://localhost:8000/profile",
+            "headers": {"Token": "<<token>>"},
         },
         "testcase": [
             {
                 "case": "check_status_200",
                 "data": None,
-            },
-            {
-                "case": "check_status_200",
-                "data": {
-                    "valid": True,
-                    "token": "dkqnweoidj2939023i0923u09",
-                },
             },
         ],
         "true": {},
@@ -137,6 +139,7 @@ flow_response = list()
 
 # Function to execute the flow of API calls and tests
 async def execute_flow(flow):
+
     if not flow:
         print("End of flow.")
         return
@@ -150,10 +153,14 @@ async def execute_flow(flow):
         for variable, value in local_variables.items():
             request_data = request_data.replace(f"<<{variable}>>", value)
 
+        for variable, value in global_variable.items():
+            request_data = request_data.replace(f"<<{str(variable)}>>", str(value))
+
         request_data = json.loads(request_data)
         method = request_data["method"]
         url = request_data["url"]
         headers = request_data.get("headers", {})
+
         body = request_data.get("body", {})
         try:
             # Send the request and get the response
@@ -164,8 +171,11 @@ async def execute_flow(flow):
             response_data = await response.text()
         # Run test cases
         test_cases = flow["testcase"]
+
         automation_testing = AutomationTesting(response)
         test_result = await automation_testing.run(test_cases)
+        if test_result["global_variables"] != {}:
+            global_variable.update(test_result["global_variables"])
         is_passed = test_result["passed_all"]
 
         # Log the results
