@@ -27,6 +27,7 @@ with open(f"{root_path}/config.json", "r") as config_file:
     config = json.load(config_file)
 sys.path.insert(1, f"{root_path}/include")
 
+from Flow import FlowExecutor
 from User import User  # type: ignore
 from Session import Session  # type: ignore
 from Authentication import Authentication  # type: ignore
@@ -63,10 +64,17 @@ class SaveToWorkspaceRequest(BaseModel):
 
 
 class FetchOneRequest(BaseModel):
+
     method: str
     url: str
     headers: Optional[Dict[str, Any]] = None
     body: Optional[Dict[str, Any]] = None
+    test_cases: Optional[List] = []
+
+
+class FetchManeyRequest(BaseModel):
+    request_list: List
+    test_cases: Optional[List] = []
 
 
 class VerifyRequest(BaseModel):
@@ -80,7 +88,7 @@ class LoginRequest(BaseModel):
 
 
 class WorkFlowRequest(BaseModel):
-    workflow_data: list
+    workflow_data: List
     automation_data: Optional[Dict[str, Any]] = None
 
 
@@ -100,6 +108,11 @@ class ValidateResponseSchemaRequest(BaseModel):
     expected_body_schema: Optional[Dict[str, Any]] = None
 
 
+class FlowRequest(BaseModel):
+    flow: Dict
+    global_variable: Dict
+
+
 class ValidateResponseBodyRequest(BaseModel):
     method: str
     url: str
@@ -108,9 +121,16 @@ class ValidateResponseBodyRequest(BaseModel):
     expected_body: Optional[Dict[str, Any]] = None
 
 
+class GetWorkspaceRequest(BaseModel):
+    workspace_id: str
+
+
+class AddCollaboratorsRequest(BaseModel):
+    workspace_id: str
+    collaborators: List
+
+
 async def verify_session(token, client_ip, user_agent):
-    if token is None:
-        return await make_response(jsonify({"detail": "Token is missing"}), 401)
 
     return await session.verify(token, client_ip=client_ip, user_agent=user_agent)
 
@@ -243,10 +263,13 @@ async def fetch_many():
         return jsonify(result)
 
     async def make_api_call(api_call_data):
+
         url = api_call_data["url"]
         headers = api_call_data["headers"]
         data = api_call_data["body"]
         method = api_call_data["method"].upper()
+        test_cases = api_call_data["test_cases"]
+        tag = api_call_data["tag"]
 
         async with aiohttp.ClientSession() as request_session:
             try:
@@ -254,26 +277,33 @@ async def fetch_many():
                     async with request_session.get(
                         url, json=data, headers=headers
                     ) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
                 elif method == "POST":
                     async with request_session.post(
                         url, json=data, headers=headers
                     ) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
                 elif method == "PUT":
                     async with request_session.put(
                         url, json=data, headers=headers
                     ) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
                 elif method == "DELETE":
                     async with request_session.delete(url, headers=headers) as response:
-                        return await response.json()
+                        response_data = await response.json()
 
             except aiohttp.ContentTypeError as e:
-                return await response.text()
+                response_data = await response.text()
+            automation_testing = AutomationTesting(response)
+            test_result = await automation_testing.run(test_cases)
+            return {
+                "tag": tag,
+                "response_data": response_data,
+                "test_result": test_result,
+            }
 
     # Create tasks for each API call
     tasks = [make_api_call(api_call_data) for api_call_data in api_calls_data]
@@ -307,7 +337,7 @@ async def fetch_one():
         headers = api_call_data["headers"]
         data = api_call_data["body"]
         method = api_call_data["method"].upper()
-
+        api_call_data = FetchOneRequest(**api_call_data)
         async with aiohttp.ClientSession() as request_session:
             try:
                 if method == "GET":
@@ -333,7 +363,15 @@ async def fetch_one():
                         response_data = await response.json()
             except aiohttp.ContentTypeError as e:
                 response_data = await response.text()
-            return {"valid": True, "response": response_data}
+
+            automation_testing = AutomationTesting(response)
+            test_result = await automation_testing.run(api_call_data.test_cases)
+
+            return {
+                "valid": True,
+                "response": response_data,
+                "test_result": test_result,
+            }
 
     return jsonify(result)
 
@@ -348,7 +386,6 @@ async def save_to_workspace():
         client_ip=client_ip,
         user_agent=user_agent,
     )
-    print(result)
     if result["valid"]:
         request_data = await request.get_json()
         save_data = SaveToWorkspaceRequest(**request_data)
@@ -366,6 +403,29 @@ async def save_to_workspace():
             save_data.workspace_id, storage_entry
         )
         return {"valid": True, "message": "data saved"}
+    return result
+
+
+@app.route("/run-flow", methods=["POST"])
+async def run_flow():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    if result["valid"]:
+        request_data = await request.get_json()
+        flow_data = FlowRequest(**request_data)
+        # Usage
+        executor = FlowExecutor()
+        executor.set_global_variable(flow_data.global_variable)
+        await executor.execute_flow(flow_data.flow)
+        flow_result = executor.get_flow_response()
+
+        return {"valid": True, "flow_result": flow_result}
     return result
 
 
@@ -389,7 +449,7 @@ async def history():
 
 
 @app.route("/create-workspace", methods=["POST"])
-async def create_workflow():
+async def create_workspace():
     token = request.headers.get("Token")
     client_ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
@@ -406,6 +466,54 @@ async def create_workflow():
             await session.get("email"), create_workflow_data.name
         )
         return {"valid": True, "workspace_id": workspace_id}
+    return result
+
+
+@app.route("/get-workspace", methods=["POST"])
+async def get_workspace():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    if result["valid"]:
+        response_data = await request.get_json()
+        workflow_data = GetWorkspaceRequest(**response_data)
+        workspace_data = await workspacemanager.get_workspace(
+            workflow_data.workspace_id, await session.get("email")
+        )
+        return {"valid": True, "workspace_id": workspace_data}
+    return result
+
+
+@app.route("/add-collaborators", methods=["POST"])
+async def add_collaborators():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    if result["valid"]:
+        response_data = await request.get_json()
+        collaborators_data = AddCollaboratorsRequest(**response_data)
+        is_owner = await workspacemanager.is_owner(
+            collaborators_data.workspace_id, await session.get("email")
+        )
+        if is_owner:
+            workspace_data = await workspacemanager.add_collaborator(
+                collaborators_data.workspace_id, collaborators_data.collaborators
+            )
+            return {"valid": True, "message": workspace_data}
+        return {"valid": True, "message": "you are not the owner"}
+    return result
 
 
 @app.route("/workflow", methods=["POST"])
@@ -516,7 +624,6 @@ async def validate_response_body():
             request_model = ValidateResponseBodyRequest(**data)
         except (ValidationError, TypeError) as e:
             return await make_response(jsonify({"detail": str(e)}), 401)
-        print(request_model)
         response = await automation_testing.validate_response_body(
             method=request_model.method,
             url=request_model.url,
