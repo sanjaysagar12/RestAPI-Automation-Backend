@@ -57,7 +57,8 @@ class AutomationTesting:
 
         self.response = response
 
-    async def validate_response_schema(self, actual_body, expected_body_schema):
+    async def validate_response_schema(self, expected_body_schema):
+        actual_body = await self.response.json()
         # Extract structures
         structure1 = extract_structure(actual_body)
         structure2 = extract_structure(expected_body_schema)
@@ -76,7 +77,8 @@ class AutomationTesting:
             "response_body": actual_body,
         }
 
-    async def validate_response_body(self, actual_body, expected_body=None):
+    async def validate_response_body(self, expected_body=None):
+        actual_body = await self.response.json()
         if actual_body == expected_body:
             return {
                 "passed": True,
@@ -89,10 +91,11 @@ class AutomationTesting:
             "response_body": actual_body,
         }
 
-    async def check_valid_json(self, response):
+    async def check_valid_json(self):
+        response = await self.response.text()
         try:
             # Try to parse the response as JSON
-            json_response = json.loads(response)
+            json_response = json.dumps(response)
             # If parsing succeeds, the response is in JSON format
             print("Response is in JSON format.")
             # Process the JSON response as needed
@@ -105,38 +108,42 @@ class AutomationTesting:
             # ...
             return False
 
-    async def check_header_element(self, actual_headers, expected_header_element):
+    async def check_header_element(self, expected_header_element):
+        actual_headers = self.response.headers()
         if expected_header_element in actual_headers:
             return True
         return False
 
-    async def check_html_response(self, response_text):
+    async def check_html_response(self):
+        response_text = await self.response.text()
         try:
             # Check if the response starts with a valid HTML tag
             html_tag_pattern = (
                 r"^<\s*(!DOCTYPE\s*html|html|body|head|title|script|style)"
             )
             if re.match(html_tag_pattern, response_text, re.IGNORECASE):
-                return "The response is in HTML format."
+                return True
             else:
-                return "The response is not in HTML format."
+                return False
         except Exception as e:
             return f"Error: {str(e)}"
 
-    async def check_xml_response(self, response_text):
+    async def check_xml_response(self):
+        response_text = await self.response.text()
         try:
             # Check if the response starts with an XML declaration
             xml_declaration_pattern = r'^<\?xml\s+version\s*=\s*"[^"]*"'
             if re.match(xml_declaration_pattern, response_text, re.IGNORECASE):
-                return "The response is in XML format."
+                return True
             else:
-                return "The response is not in XML format."
+                return False
         except Exception as e:
             return f"Error: {str(e)}"
 
-    async def check_json_key_value(self, response_text, key, expected_value):
+    async def check_json_key_value(self, key, expected_value):
+        response_text = await self.response.text()
         # Check if the response is a valid JSON
-        if await self.check_valid_json(response_text):
+        if await self.check_valid_json():
             # Parse the response as JSON
             response_json = json.loads(response_text)
 
@@ -144,25 +151,41 @@ class AutomationTesting:
             if key in response_json:
                 # Check if the value matches the expected value
                 if response_json[key] == expected_value:
-                    return "The JSON response contains the expected key-value pair."
+                    return {
+                        "passed": True,
+                        "message": "The JSON response contains the expected key-value pair.",
+                    }
                 else:
-                    return f"The value for the key '{key}' does not match the expected value."
+                    return {
+                        "passed": False,
+                        "message": f"The value for the key '{key}' does not match the expected value.",
+                    }
             else:
-                return f"The JSON response does not contain the key '{key}'."
+                return {
+                    "passed": False,
+                    "message": f"The JSON response does not contain the key '{key}'.",
+                }
 
-    async def check_json_key_value(self, response_text, key="token"):
+    async def check_json_key(self, key="token"):
+        response_text = await self.response.text()
         # Check if the response is a valid JSON
-        if await self.check_valid_json(response_text):
+        if await self.check_valid_json():
             # Parse the response as JSON
             response_json = json.loads(response_text)
 
             # Check if the key exists in the JSON
             if key in response_json:
-                return f"The JSON response contains the key '{key}'."
+                return {
+                    "passed": True,
+                    "message": f"The JSON response contains the key '{key}'.",
+                }
             else:
-                return f"The JSON response does not contain the key '{key}'."
+                return {
+                    "passed": False,
+                    "message": f"The JSON response does not contain the key '{key}'.",
+                }
         else:
-            return "The response is not in JSON format."
+            return {"passed": True, "message": "The response is not in JSON format."}
 
     async def send_request(self, method, url, headers=None, body=None):
         async with aiohttp.ClientSession() as request_session:
@@ -212,60 +235,23 @@ class AutomationTesting:
             return True
         return False
 
-    async def status_code(
-        self, method, url, headers=None, body=None, expected_status_code=200
-    ):
-        async with aiohttp.ClientSession() as request_session:
-            try:
-                if method.upper() == "GET":
-                    async with request_session.get(
-                        url, headers=headers, json=body
-                    ) as response:
-                        status_code = response.status
-                        response_body = await response.text()
-                elif method.upper() == "POST":
-                    async with request_session.post(
-                        url, headers=headers, json=body
-                    ) as response:
-                        status_code = response.status
-                        response_body = await response.text()
-                elif method.upper() == "PUT":
-                    async with request_session.put(
-                        url, headers=headers, json=body
-                    ) as response:
-                        status_code = response.status
-                        response_body = await response.text()
-                elif method.upper() == "DELETE":
-                    async with request_session.delete(url, headers=headers) as response:
-                        status_code = response.status
-                        response_body = await response.text()
-                else:
-                    return {
-                        "passed": False,
-                        "detail": "Unsupported HTTP method",
-                    }
+    async def check_status_code(self, expected_status_code=200):
 
-                if status_code == expected_status_code:
-                    return {
-                        "passed": True,
-                        "status_code": status_code,
-                        "response_body": response_body,
-                    }
-                else:
-                    return {
-                        "passed": False,
-                        "message": f"Expected status code {expected_status_code}, but got {status_code}",
-                        "status_code": status_code,
-                        "response_body": response_body,
-                    }
+        status_code = self.response.status
+        if status_code == expected_status_code:
+            return {
+                "passed": True,
+                "status_code": status_code,
+            }
+        else:
+            return {
+                "passed": False,
+                "message": f"Expected status code {expected_status_code}, but got {status_code}",
+                "status_code": status_code,
+            }
 
-            except Exception as e:
-                return {
-                    "passed": False,
-                    "detail": str(e),
-                }
-
-    async def response_body_contains_string(self, response_body, expected_string=None):
+    async def response_body_contains_string(self, expected_string=None):
+        response_body = await self.response.text()
         if expected_string is not None and expected_string in response_body:
             return {
                 "passed": True,
@@ -291,21 +277,12 @@ class AutomationTesting:
                 "response_time": response_time,
             }
 
-    async def verify_successful_post_request(
-        self, status_code, expected_status_code=201
-    ):
+    async def verify_successful_post_request(self, expected_status_code=201):
+        status_code = self.response.status
         if status_code == expected_status_code:
-            return {
-                "passed": True,
-                "status_code": status_code,
-                "message": "Success: The POST request was successful with the expected status code.",
-            }
+            return True
         else:
-            return {
-                "passed": False,
-                "status_code": status_code,
-                "message": f"Failure: Expected status code {expected_status_code}, but got {status_code}",
-            }
+            return False
 
     async def convert_xml_to_json(self, response_text):
         # Check if the response is in XML format
@@ -348,13 +325,15 @@ class AutomationTesting:
             if test_case["case"] == "set_global_variable":
 
                 case_result["global_variables"].update(test_case["data"])
+                continue
 
             if test_case["case"] == "set_global_variable_from_response":
                 key = test_case["data"]["key"]
                 extracted_elements = extract_elements(test_case["data"]["value"])
                 result = await self.get_nested_element(extracted_elements)
                 case_result["global_variables"].update({key: result})
-
+                continue
+            # status code 200
             if test_case["case"] == "check_status_200":
 
                 result = await self.check_status_200()
@@ -362,5 +341,124 @@ class AutomationTesting:
 
                 if not result:
                     case_result["passed_all"] = False
+                continue
 
+            # verify_successful_post_request
+            if test_case["case"] == "verify_successful_post_request":
+
+                result = await self.verify_successful_post_request()
+                case_result.update({"verify_successful_post_request": result})
+
+                if not result:
+                    case_result["passed_all"] = False
+                continue
+
+            # convert_xml_to_json
+            if test_case["case"] == "convert_xml_to_json":
+
+                result = await self.convert_xml_to_json(test_case["data"])
+                case_result.update({"convert_xml_to_json": result})
+
+                if not result["passed"]:
+                    case_result["passed_all"] = False
+
+                continue
+
+            # response_body_contains_string
+            if test_case["case"] == "response_body_contains_string":
+                data = test_case["data"]
+                result = await self.response_body_contains_string(data)
+                case_result.update({"response_body_contains_string": result})
+
+                if not result["passed"]:
+                    case_result["passed_all"] = False
+
+                continue
+
+            # check_status_code
+            if test_case["case"] == "check_status_code":
+                data = test_case["data"]
+                result = await self.check_status_code(data)
+                case_result.update({"check_status_code": result})
+
+                if not result["passed"]:
+                    case_result["passed_all"] = False
+
+                continue
+
+            # check_json_key
+            if test_case["case"] == "check_json_key":
+                data = test_case["data"]
+                result = await self.check_json_key(data)
+                case_result.update({"check_json_key": result})
+
+                if not result["passed"]:
+                    case_result["passed_all"] = False
+
+                continue
+
+            # check_json_key_value
+            if test_case["case"] == "check_json_key_value":
+                data = test_case["data"]
+                result = await self.check_json_key_value(
+                    key=data["key"], expected_value=data["value"]
+                )
+                case_result.update({"check_json_key_value": result})
+
+                if not result["passed"]:
+                    case_result["passed_all"] = False
+
+                continue
+            # check_xml_response
+            if test_case["case"] == "check_xml_response":
+
+                result = await self.check_xml_response()
+                case_result.update({"check_xml_response": result})
+
+                if not result:
+                    case_result["passed_all"] = False
+
+                continue
+            # check_html_response
+            if test_case["case"] == "check_html_response":
+
+                result = await self.check_html_response()
+                case_result.update({"check_html_response": result})
+
+                if not result:
+                    case_result["passed_all"] = False
+                continue
+
+            # check_header_element
+            if test_case["case"] == "check_header_element":
+                data = test_case["data"]
+                result = await self.check_header_element(data)
+                case_result.update({"check_header_element": result})
+
+                if not result:
+                    case_result["passed_all"] = False
+
+                continue
+
+            # check_valid_json
+            if test_case["case"] == "check_valid_json":
+
+                result = await self.check_valid_json()
+                case_result.update({"check_valid_json": result})
+
+                if not result:
+                    case_result["passed_all"] = False
+
+                continue
+
+            # validate_response_schema
+            if test_case["case"] == "validate_response_schema":
+                data = test_case["data"]
+                result = await self.validate_response_schema(data)
+                case_result.update({"validate_response_schema": result})
+                print(json.dumps(result, indent=4))
+                if not result["passed"]:
+                    case_result["passed_all"] = False
+
+                continue
         return case_result
