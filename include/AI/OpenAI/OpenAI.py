@@ -28,4 +28,4 @@ prompt = ( f" {user_input}")
 result=structured_generator(prompt)
 output=result.choices[0].message.content
 
-print(output)
+print("The Output of the above Prompt is:\n",output)
