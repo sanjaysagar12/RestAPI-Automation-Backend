@@ -4,3 +4,5 @@ test.py
 include/test.py
 test2.py
 .vscode/
+include/AI/Gemini/.env
+include/AI/OpenAI/.env
