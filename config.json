@@ -6,5 +6,8 @@
     "db_username": "root",
     "db_password": 12345,
     "db_name": "admin"
+  },
+  "google_ai": {
+    "api_key": "AIzaSyAG8JcOuWGin_lf7OF4PaUuCawBZK28sDs"
   }
 }
