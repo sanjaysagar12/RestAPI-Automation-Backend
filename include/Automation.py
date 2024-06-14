@@ -318,20 +318,32 @@ class AutomationTesting:
             return None
 
     async def run(self, test_case_list):
-
+        previous_request = True
         case_result = {"passed_all": True, "global_variables": {}}
         for test_case in test_case_list:
 
             if test_case["case"] == "set_global_variable":
-
-                case_result["global_variables"].update(test_case["data"])
+                if test_case["chack_previous_case"]:
+                    if previous_request:
+                        case_result["global_variables"].update(test_case["data"])
+                else:
+                    case_result["global_variables"].update(test_case["data"])
                 continue
 
             if test_case["case"] == "set_global_variable_from_response":
-                key = test_case["data"]["key"]
-                extracted_elements = extract_elements(test_case["data"]["value"])
-                result = await self.get_nested_element(extracted_elements)
-                case_result["global_variables"].update({key: result})
+                if test_case["chack_previous_case"]:
+                    if previous_request:
+                        key = test_case["data"]["key"]
+                        extracted_elements = extract_elements(
+                            test_case["data"]["value"]
+                        )
+                        result = await self.get_nested_element(extracted_elements)
+                        case_result["global_variables"].update({key: result})
+                else:
+                    key = test_case["data"]["key"]
+                    extracted_elements = extract_elements(test_case["data"]["value"])
+                    result = await self.get_nested_element(extracted_elements)
+                    case_result["global_variables"].update({key: result})
                 continue
             # status code 200
             if test_case["case"] == "check_status_200":
@@ -340,7 +352,9 @@ class AutomationTesting:
                 case_result.update({"check_status_200": result})
 
                 if not result:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
                 continue
 
             # verify_successful_post_request
@@ -350,7 +364,9 @@ class AutomationTesting:
                 case_result.update({"verify_successful_post_request": result})
 
                 if not result:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
                 continue
 
             # convert_xml_to_json
@@ -361,6 +377,7 @@ class AutomationTesting:
 
                 if not result["passed"]:
                     case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
 
@@ -371,7 +388,9 @@ class AutomationTesting:
                 case_result.update({"response_body_contains_string": result})
 
                 if not result["passed"]:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
 
@@ -382,7 +401,9 @@ class AutomationTesting:
                 case_result.update({"check_status_code": result})
 
                 if not result["passed"]:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
 
@@ -393,7 +414,9 @@ class AutomationTesting:
                 case_result.update({"check_json_key": result})
 
                 if not result["passed"]:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
 
@@ -406,7 +429,9 @@ class AutomationTesting:
                 case_result.update({"check_json_key_value": result})
 
                 if not result["passed"]:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
             # check_xml_response
@@ -416,7 +441,9 @@ class AutomationTesting:
                 case_result.update({"check_xml_response": result})
 
                 if not result:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
             # check_html_response
@@ -426,7 +453,9 @@ class AutomationTesting:
                 case_result.update({"check_html_response": result})
 
                 if not result:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
                 continue
 
             # check_header_element
@@ -436,7 +465,9 @@ class AutomationTesting:
                 case_result.update({"check_header_element": result})
 
                 if not result:
-                    case_result["passed_all"] = False
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
 
                 continue
 
@@ -447,8 +478,9 @@ class AutomationTesting:
                 case_result.update({"check_valid_json": result})
 
                 if not result:
-                    case_result["passed_all"] = False
-
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
                 continue
 
             # validate_response_schema
@@ -458,7 +490,8 @@ class AutomationTesting:
                 case_result.update({"validate_response_schema": result})
                 print(json.dumps(result, indent=4))
                 if not result["passed"]:
-                    case_result["passed_all"] = False
-
+                    if test_case["imp"]:
+                        case_result["passed_all"] = False
+                    previous_request = False
                 continue
         return case_result

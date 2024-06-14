@@ -300,6 +300,7 @@ async def fetch_many():
 
             except aiohttp.ContentTypeError as e:
                 response_data = await response.text()
+
             automation_testing = AutomationTesting(response)
             test_result = await automation_testing.run(test_cases)
             return {
@@ -344,13 +345,19 @@ async def fetch_one():
         async with aiohttp.ClientSession() as request_session:
             try:
                 if method == "GET":
-                    async with request_session.get(url, json=data, headers=headers) as response:
+                    async with request_session.get(
+                        url, json=data, headers=headers
+                    ) as response:
                         response_data = await response.json()
                 elif method == "POST":
-                    async with request_session.post(url, json=data, headers=headers) as response:
+                    async with request_session.post(
+                        url, json=data, headers=headers
+                    ) as response:
                         response_data = await response.json()
                 elif method == "PUT":
-                    async with request_session.put(url, json=data, headers=headers) as response:
+                    async with request_session.put(
+                        url, json=data, headers=headers
+                    ) as response:
                         response_data = await response.json()
                 elif method == "DELETE":
                     async with request_session.delete(url, headers=headers) as response:
@@ -363,13 +370,15 @@ async def fetch_one():
 
             # Integrate AI functionality
             ai_client = AsyncGeminiClient()
-            ai_analysis = await ai_client.generate_content(response_data, api_call_data.test_cases, test_result)
+            ai_analysis = await ai_client.generate_content(
+                response_data, api_call_data.test_cases, test_result
+            )
 
             return {
                 "valid": True,
                 "response": response_data,
                 "test_result": test_result,
-                "ai_analysis": ai_analysis
+                "ai_analysis": ai_analysis,
             }
 
     return jsonify(result)
