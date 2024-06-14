@@ -152,9 +152,11 @@ async def register_user():
     if response["valid"]:
         otp = response["otp"]
         await email.send(
-            recipient_email=request_model.email,
+            recipient_email=[request_model.email],
             subject="OTP",
-            body=str(otp),
+            header="Hello",
+            body=f"*OTP* [>{str(otp)}<]",
+            footer="thankyou",
         )
         return jsonify(
             {

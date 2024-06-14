@@ -7,7 +7,10 @@
     "db_password": 12345,
     "db_name": "admin"
   },
+
   "google_ai": {
     "api_key": "AIzaSyAG8JcOuWGin_lf7OF4PaUuCawBZK28sDs"
-  }
+  },
+
+  "hlomail_apikey": "f31bcdf313ef9eb68e6953a787ca7056"
 }

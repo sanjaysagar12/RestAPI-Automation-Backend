@@ -49,6 +49,12 @@ class WorkspaceManager:
         result = await workspaces_collection.insert_one(workspace)
         return str(result.inserted_id)  # Ensure the ID is returned as a string
 
+    async def get_collaborator(self, workspace_id):
+        data = await workspaces_collection.find(
+            {"_id": ObjectId(workspace_id)}, {"_id": 0}
+        )
+        return data["collaborators"]
+
     async def add_collaborator(self, workspace_id, collaborators):
         for email in collaborators:
             result = await workspaces_collection.update_one(
