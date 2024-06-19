@@ -28,7 +28,7 @@ class EMail:
         body: str,
         footer: str,
     ):
-        url = "https://hlomail.sanjaysagar.com/noreply-mail"
+        url = "https://hlomail.sanjaysagar.com/v1/noreply-mail"
         data = {
             "api_key": api_key,
             "recipient_email": recipient_email,
@@ -41,6 +41,5 @@ class EMail:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=data) as response:
-                print(response.status)
-                response_json = await response.json()
-                print(response_json)
+                
+                return True
