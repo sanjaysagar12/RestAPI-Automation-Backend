@@ -320,180 +320,183 @@ class AutomationTesting:
             return None
 
     async def run(self, test_case_list):
+        
         previous_request = True
         case_result = {"passed_all": True, "global_variables": {}}
         for test_case in test_case_list:
-
-            if test_case["case"] == "set_global_variable":
-                if test_case["chack_previous_case"]:
-                    if previous_request:
+            try:
+                if test_case["case"] == "set_global_variable":
+                    if test_case["chack_previous_case"]:
+                        if previous_request:
+                            case_result["global_variables"].update(test_case["data"])
+                    else:
                         case_result["global_variables"].update(test_case["data"])
-                else:
-                    case_result["global_variables"].update(test_case["data"])
-                continue
+                    continue
 
-            if test_case["case"] == "set_global_variable_from_response":
-                if test_case["chack_previous_case"]:
-                    if previous_request:
+                if test_case["case"] == "set_global_variable_from_response":
+                    if test_case["chack_previous_case"]:
+                        if previous_request:
+                            key = test_case["data"]["key"]
+                            extracted_elements = extract_elements(
+                                test_case["data"]["value"]
+                            )
+                            result = await self.get_nested_element(extracted_elements)
+                            case_result["global_variables"].update({key: result})
+                    else:
                         key = test_case["data"]["key"]
-                        extracted_elements = extract_elements(
-                            test_case["data"]["value"]
-                        )
+                        extracted_elements = extract_elements(test_case["data"]["value"])
                         result = await self.get_nested_element(extracted_elements)
                         case_result["global_variables"].update({key: result})
-                else:
-                    key = test_case["data"]["key"]
-                    extracted_elements = extract_elements(test_case["data"]["value"])
-                    result = await self.get_nested_element(extracted_elements)
-                    case_result["global_variables"].update({key: result})
-                continue
-            # status code 200
-            if test_case["case"] == "check_status_200":
+                    continue
+                # status code 200
+                if test_case["case"] == "check_status_200":
 
-                result = await self.check_status_200()
-                case_result.update({"check_status_200": result})
+                    result = await self.check_status_200()
+                    case_result.update({"check_status_200": result})
 
-                if not result:
-                    if test_case["imp"]:
+                    if not result:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
+                    continue
+
+                # verify_successful_post_request
+                if test_case["case"] == "verify_successful_post_request":
+
+                    result = await self.verify_successful_post_request()
+                    case_result.update({"verify_successful_post_request": result})
+
+                    if not result:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
+                    continue
+
+                # convert_xml_to_json
+                if test_case["case"] == "convert_xml_to_json":
+
+                    result = await self.convert_xml_to_json(test_case["data"])
+                    case_result.update({"convert_xml_to_json": result})
+
+                    if not result["passed"]:
                         case_result["passed_all"] = False
-                    previous_request = False
-                continue
+                        previous_request = False
 
-            # verify_successful_post_request
-            if test_case["case"] == "verify_successful_post_request":
+                    continue
 
-                result = await self.verify_successful_post_request()
-                case_result.update({"verify_successful_post_request": result})
+                # response_body_contains_string
+                if test_case["case"] == "response_body_contains_string":
+                    data = test_case["data"]
+                    result = await self.response_body_contains_string(data)
+                    case_result.update({"response_body_contains_string": result})
 
-                if not result:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
-                continue
+                    if not result["passed"]:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
 
-            # convert_xml_to_json
-            if test_case["case"] == "convert_xml_to_json":
+                    continue
 
-                result = await self.convert_xml_to_json(test_case["data"])
-                case_result.update({"convert_xml_to_json": result})
+                # check_status_code
+                if test_case["case"] == "check_status_code":
+                    data = test_case["data"]
+                    result = await self.check_status_code(data)
+                    case_result.update({"check_status_code": result})
 
-                if not result["passed"]:
-                    case_result["passed_all"] = False
-                    previous_request = False
+                    if not result["passed"]:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
 
-                continue
+                    continue
 
-            # response_body_contains_string
-            if test_case["case"] == "response_body_contains_string":
-                data = test_case["data"]
-                result = await self.response_body_contains_string(data)
-                case_result.update({"response_body_contains_string": result})
+                # check_json_key
+                if test_case["case"] == "check_json_key":
+                    data = test_case["data"]
+                    result = await self.check_json_key(data)
+                    case_result.update({"check_json_key": result})
 
-                if not result["passed"]:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
+                    if not result["passed"]:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
 
-                continue
+                    continue
 
-            # check_status_code
-            if test_case["case"] == "check_status_code":
-                data = test_case["data"]
-                result = await self.check_status_code(data)
-                case_result.update({"check_status_code": result})
+                # check_json_key_value
+                if test_case["case"] == "check_json_key_value":
+                    data = test_case["data"]
+                    result = await self.check_json_key_value(
+                        key=data["key"], expected_value=data["value"]
+                    )
+                    case_result.update({"check_json_key_value": result})
 
-                if not result["passed"]:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
+                    if not result["passed"]:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
 
-                continue
+                    continue
+                # check_xml_response
+                if test_case["case"] == "check_xml_response":
 
-            # check_json_key
-            if test_case["case"] == "check_json_key":
-                data = test_case["data"]
-                result = await self.check_json_key(data)
-                case_result.update({"check_json_key": result})
+                    result = await self.check_xml_response()
+                    case_result.update({"check_xml_response": result})
 
-                if not result["passed"]:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
+                    if not result:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
 
-                continue
+                    continue
+                # check_html_response
+                if test_case["case"] == "check_html_response":
 
-            # check_json_key_value
-            if test_case["case"] == "check_json_key_value":
-                data = test_case["data"]
-                result = await self.check_json_key_value(
-                    key=data["key"], expected_value=data["value"]
-                )
-                case_result.update({"check_json_key_value": result})
+                    result = await self.check_html_response()
+                    case_result.update({"check_html_response": result})
 
-                if not result["passed"]:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
+                    if not result:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
+                    continue
 
-                continue
-            # check_xml_response
-            if test_case["case"] == "check_xml_response":
+                # check_header_element
+                if test_case["case"] == "check_header_element":
+                    data = test_case["data"]
+                    result = await self.check_header_element(data)
+                    case_result.update({"check_header_element": result})
 
-                result = await self.check_xml_response()
-                case_result.update({"check_xml_response": result})
+                    if not result:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
 
-                if not result:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
+                    continue
 
-                continue
-            # check_html_response
-            if test_case["case"] == "check_html_response":
+                # check_valid_json
+                if test_case["case"] == "check_valid_json":
 
-                result = await self.check_html_response()
-                case_result.update({"check_html_response": result})
+                    result = await self.check_valid_json()
+                    case_result.update({"check_valid_json": result})
 
-                if not result:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
-                continue
+                    if not result:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
+                    continue
 
-            # check_header_element
-            if test_case["case"] == "check_header_element":
-                data = test_case["data"]
-                result = await self.check_header_element(data)
-                case_result.update({"check_header_element": result})
-
-                if not result:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
-
-                continue
-
-            # check_valid_json
-            if test_case["case"] == "check_valid_json":
-
-                result = await self.check_valid_json()
-                case_result.update({"check_valid_json": result})
-
-                if not result:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
-                continue
-
-            # validate_response_schema
-            if test_case["case"] == "validate_response_schema":
-                data = test_case["data"]
-                result = await self.validate_response_schema(data)
-                case_result.update({"validate_response_schema": result})
-                print(json.dumps(result, indent=4))
-                if not result["passed"]:
-                    if test_case["imp"]:
-                        case_result["passed_all"] = False
-                    previous_request = False
-                continue
+                # validate_response_schema
+                if test_case["case"] == "validate_response_schema":
+                    data = test_case["data"]
+                    result = await self.validate_response_schema(data)
+                    case_result.update({"validate_response_schema": result})
+                    print(json.dumps(result, indent=4))
+                    if not result["passed"]:
+                        if test_case["imp"]:
+                            case_result["passed_all"] = False
+                        previous_request = False
+                    continue
+            except Exception as e:
+                case_result.update({test_case["case"]: f"Error :{e}"})
         return case_result
