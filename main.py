@@ -16,10 +16,11 @@ root_path = os.path.dirname(__file__)
 app = Quart(__name__)
 app = cors(
     app,
-    allow_origin="http://localhost:5173",  # Assuming your React app runs on port 5173
+    allow_origin="http://localhost:5173",
     allow_credentials=True,
     allow_headers=["Content-Type", "Token"],
 )
+
 
 
 # Load configuration from config.json
@@ -497,6 +498,24 @@ async def get_workspace():
         return {"valid": True, "workspace_id": workspace_data}
     return result
 
+@app.route("/get-all-workspace", methods=["POST"])
+async def get_all_workspace():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    if result["valid"]:
+        
+        workspace_data = await workspacemanager.get_all_workspace(
+            await session.get("email")
+        )
+        return {"valid": True, "workspaces": workspace_data}
+    return result
 
 @app.route("/add-collaborators", methods=["POST"])
 async def add_collaborators():

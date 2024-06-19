@@ -109,8 +109,14 @@ class WorkspaceManager:
         if data["owner"] == email or email in data["collaborators"]:
             return json.loads(json.dumps(data, cls=CustomJSONEncoder))
         return {"error": "workspace not found"}
-
-
+    async def get_all_workspace(self,email):
+        data = workspaces_collection.find({"owner": email},{"_id":1, "name":1})
+       
+        results = []
+        async for document in data:
+            results.append(json.loads(json.dumps(document, cls=CustomJSONEncoder)))
+        return results
+    
 # # Usage examples
 # import asyncio
 
