@@ -498,7 +498,7 @@ async def get_workspace():
         return {"valid": True, "workspace_id": workspace_data}
     return result
 
-@app.route("/get-all-workspace", methods=["POST"])
+@app.route("/get-all-workspace", methods=["GET"])
 async def get_all_workspace():
     token = request.headers.get("Token")
     client_ip = request.remote_addr

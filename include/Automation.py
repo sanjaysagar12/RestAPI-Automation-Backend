@@ -165,6 +165,8 @@ class AutomationTesting:
                     "passed": False,
                     "message": f"The JSON response does not contain the key '{key}'.",
                 }
+        else:
+            return {"passed": True, "message": "The response is not in JSON format."}
 
     async def check_json_key(self, key="token"):
         response_text = await self.response.text()
