@@ -59,7 +59,6 @@ class CreateWorkspaceRequest(BaseModel):
 class SaveToWorkspaceRequest(BaseModel):
     workspace_id: str
     request: Dict
-    response: Dict
     path: str
     test_cases: Optional[List[str]] = []
     variables: Optional[Dict[str, Any]] = {}
@@ -404,8 +403,7 @@ async def save_to_workspace():
             "_id": secrets.token_hex(16),
             "path": save_data.path,
             "test_cases": save_data.test_cases,
-            "request": save_data.response,
-            "response": save_data.response,
+            "request": save_data.request,
             "local_variables": save_data.variables,
         }
         modified_count = await workspacemanager.add_storage_entry(
@@ -495,8 +493,46 @@ async def get_workspace():
         workspace_data = await workspacemanager.get_workspace(
             workflow_data.workspace_id, await session.get("email")
         )
-        return {"valid": True, "workspace_id": workspace_data}
-    return result
+        
+        # Extracting path and _id from each item in the storage array
+        extracted_data = [
+            {"path": item["path"], "_id": item["_id"]}
+            for item in workspace_data["storage"]
+        ]
+        
+        return jsonify({"valid": True, "requests": extracted_data})
+    
+    return jsonify(result)
+
+
+@app.route("/get-workspace-details/<workspace_id>/<request_id>", methods=["GET"])
+async def get_workspace_details(workspace_id, request_id):
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    if result["valid"]:
+        # Assuming workspacemanager has a method to fetch workspace details by ID
+        workspace_data = await workspacemanager.get_workspace(workspace_id, await session.get("email"))
+
+        # Find the specific request by request_id within the workspace
+        request_data = None
+        for item in workspace_data.get("storage", []):
+            if item.get("_id") == request_id:
+                request_data = item
+                break
+        
+        if request_data:
+            return jsonify({"valid": True, "request_data": request_data})
+        else:
+            return jsonify({"valid": False, "message": "Request not found in the workspace"})
+    
+    return jsonify(result)
 
 @app.route("/get-all-workspace", methods=["GET"])
 async def get_all_workspace():
