@@ -23,22 +23,21 @@ app = cors(
 
 
 
-# Load configuration from config.json
-with open(f"{root_path}/config.json", "r") as config_file:
-    config = json.load(config_file)
-sys.path.insert(1, f"{root_path}/include")
+# # Load configuration from config.json
+# with open(f"{root_path}/config.json", "r") as config_file:
+#     config = json.load(config_file)
+# sys.path.insert(1, f"{root_path}/include")
 
-from Flow import FlowExecutor
-from User import User  # type: ignore
-from Session import Session  # type: ignore
-from Authentication import Authentication  # type: ignore
-from EMail import EMail  # type: ignore
-from EndPoint import EndPoint  # type: ignore
-from WorkFlow import WorkFlow  # type: ignore
-from Workspace import WorkspaceManager  # type: ignore
-from Automation import AutomationTesting  # type: ignore
-from AI import AsyncGeminiClient
-
+from include.Flow import FlowExecutor # type: ignore
+from include.Session import Session  # type: ignore
+from include.Authentication import Authentication  # type: ignore
+from include.EMail import EMail  # type: ignore
+from include.EndPoint import EndPoint  # type: ignore
+from include.WorkFlow import WorkFlow  # type: ignore
+from include.Workspace import WorkspaceManager  # type: ignore
+from include.Automation import AutomationTesting  # type: ignore
+from include.AI import AsyncGeminiClient # type: ignore
+from include.User import User
 workspacemanager = WorkspaceManager()
 email = EMail()
 session = Session()
@@ -54,6 +53,9 @@ class RegisterRequest(BaseModel):
 class CreateWorkspaceRequest(BaseModel):
     name: str
     collaborator: Optional[List[str]] = None
+
+class UserAiTestingRequest(BaseModel):
+    user_promt: str
 
 
 class SaveToWorkspaceRequest(BaseModel):
@@ -427,6 +429,7 @@ async def run_flow():
         request_data = await request.get_json()
         flow_data = FlowRequest(**request_data)
         # Usage
+        print("Run Flow:",flow_data.flow)
         executor = FlowExecutor()
         executor.set_global_variable(flow_data.global_variable)
         await executor.execute_flow(flow_data.flow)
@@ -475,6 +478,36 @@ async def create_workspace():
         return {"valid": True, "workspace_id": workspace_id}
     return result
 
+@app.route("/ai-testing", methods=["POST"])
+async def ai_testing():
+    token = request.headers.get("Token")
+    client_ip = request.remote_addr
+    user_agent = request.headers.get("User-Agent")
+    result = await verify_session(
+        token=token,
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+
+    if result["valid"]:
+        response_data = await request.get_json()
+        create_workflow_data = UserAiTestingRequest(**response_data)
+        
+        # Integrate AI functionality
+        ai_client = AsyncGeminiClient()
+        flow_data = await ai_client.generate_flow_json(create_workflow_data.user_promt)
+        flow_data = flow_data.replace('```',"")
+        flow_data = flow_data.replace('json',"")
+        flow_data = json.loads(flow_data)
+        flow_data =  flow_data['flow']
+        executor = FlowExecutor()
+        executor.set_global_variable({})
+        await executor.execute_flow(flow_data)
+        
+        flow_result = executor.get_flow_response()
+
+        return {"valid": True, "flow_result": flow_result}
+    return result
 
 @app.route("/get-workspace", methods=["POST"])
 async def get_workspace():

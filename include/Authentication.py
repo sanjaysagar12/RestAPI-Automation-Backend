@@ -1,7 +1,7 @@
 import datetime
 
 from random import randint
-from MongoDB import MongoDB
+from .MongoDB import MongoDB
 from pydantic import EmailStr
 from passlib.context import CryptContext
 

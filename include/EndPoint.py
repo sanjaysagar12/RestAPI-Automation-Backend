@@ -1,4 +1,4 @@
-from MongoDB import MongoDB
+from .MongoDB import MongoDB
 
 end_point_collection = MongoDB("admin", "api_end_point")
 

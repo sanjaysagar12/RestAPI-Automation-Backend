@@ -1,6 +1,6 @@
 import json
 
-from MongoDB import MongoDB
+from .MongoDB import MongoDB
 
 user_collection = MongoDB("admin", "users")
 

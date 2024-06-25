@@ -1,7 +1,7 @@
 import secrets
 import datetime
 
-from MongoDB import MongoDB
+from .MongoDB import MongoDB
 
 session_collection = MongoDB("admin", "session")
 

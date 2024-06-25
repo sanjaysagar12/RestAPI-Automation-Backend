@@ -3,7 +3,7 @@ import json
 import aiohttp
 
 
-from Automation import AutomationTesting
+from .Automation import AutomationTesting
 
 
 class FlowExecutor:
